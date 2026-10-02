@@ -132,6 +132,17 @@
   background-size: 20px 20px;
 }
 
+/* The NEXA wordmark from logo.png. Its brightness is used as a mask, so it takes the surrounding text colour
+   and works on both themes. 616 x 96 is the cut-out's size. */
+.wordmark {
+  display: block;
+  height: 0.8125rem;
+  aspect-ratio: 616 / 96;
+  background: currentColor;
+  -webkit-mask: url("/brand/wordmark-alpha.png") center / contain no-repeat;
+  mask: url("/brand/wordmark-alpha.png") center / contain no-repeat;
+}
+
 /* Logo loader: the bare mark, a light sweeping through it, rings rippling out behind it. */
 .logo-loader {
   position: relative;
