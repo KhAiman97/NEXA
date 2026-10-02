@@ -84,6 +84,7 @@ async function main() {
       insert into maintenance_logs (vehicle_id, kind, performed_on, cost, next_due_on, next_due_km) values
         ('33333333-3333-3333-3333-333333333333', 'oil_change', '2030-01-01', 10, '2030-06-01', null),
         ('33333333-3333-3333-3333-333333333333', 'oil_change', '2031-03-01', 10, '2031-09-01', 1200);
+      insert into odometer_logs (vehicle_id, odometer_km, logged_at, note) values ('33333333-3333-3333-3333-333333333333', 1600, '2031-04-20T10:00:00+08', 'later'), ('33333333-3333-3333-3333-333333333333', 1550, '2031-04-15T10:00:00+08', null);
       insert into projects (name, status, expense_tag) values ('Pi cluster', 'active', 'pi-cluster');
       insert into inventory_items (name, quantity, reorder_level) values ('Resistors', 1, 5), ('Wire', 9, 5);
       insert into foods (name, calories) values ('Nasi lemak', 644);
@@ -146,7 +147,8 @@ async function main() {
   const vehicles = await loadVehiclesPage(db, TODAY);
   const detail = vehicles.details.get("33333333-3333-3333-3333-333333333333");
   check("vehicles: one round trip, no per-vehicle follow-ups", oneCall("vehicles_bundle"), calls);
-  check("vehicles: lists", vehicles.vehicles.length === 1 && vehicles.fuel.length === 2 && vehicles.maintenance.length === 2 && Number(vehicles.costs[0].current_odometer_km) === 1500, vehicles.costs);
+  check("vehicles: lists", vehicles.vehicles.length === 1 && vehicles.fuel.length === 2 && vehicles.maintenance.length === 2 && Number(vehicles.costs[0].current_odometer_km) === 1600, vehicles.costs);
+  check("vehicles: odometer readings, newest first", vehicles.odometer.length === 2 && vehicles.odometer[0].odometer_km === 1600 && vehicles.odometer[0].note === "later" && vehicles.odometer[1].odometer_km === 1550, vehicles.odometer);
   check("vehicles: fuel segment for the vehicle", detail?.segments.length === 1 && Number(detail.segments[0].km_per_liter) === 16, detail?.segments);
   check("vehicles: reminders use only the latest service of each kind", detail?.due.overdueByDate.length === 0 && detail?.due.dueByOdometer.length === 1 && detail.due.dueByOdometer[0].performed_on === "2031-03-01", detail?.due);
 

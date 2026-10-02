@@ -15,6 +15,7 @@ export async function updateVehicle(vehicleId: unknown, patch: unknown) { return
 export async function deleteVehicle(vehicleId: unknown) { return run(({ db }) => vehicles.remove(db, parse(id, vehicleId)), V); }
 
 export async function createOdometerLog(input: unknown) { return run(({ db }) => odometerLogs.create(db, parse(odometerInput, input)), V); }
+export async function updateOdometerLog(logId: unknown, patch: unknown) { return run(({ db }) => odometerLogs.update(db, parse(id, logId), parse(partialOf(odometerInput), patch)), V); }
 export async function deleteOdometerLog(logId: unknown) { return run(({ db }) => odometerLogs.remove(db, parse(id, logId)), V); }
 
 export async function createFuelLog(input: unknown) { return run(({ db }) => logFuel(db, parse(fuelLogInput, input)), V); }

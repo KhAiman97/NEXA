@@ -199,6 +199,9 @@ check('finance_bundle: other users see only their own', finB.accounts.every(a =>
 
 const veh = (await one(A, 'select vehicles_bundle() as j')).j
 check('vehicles_bundle: lists match the tables and views', same(veh.vehicles, await direct(A, 'select * from vehicles order by name limit 100')) && same(veh.costs, await direct(A, 'select * from vehicle_running_costs order by name limit 100')) && same(veh.fuel, await direct(A, 'select * from fuel_logs order by filled_at desc limit 15')), JSON.stringify(ids(veh.vehicles)))
+await as(A, `insert into odometer_logs (vehicle_id,odometer_km,logged_at) select id, 123, '2031-02-01T10:00:00+08' from vehicles limit 1`)
+const vehOdo = (await one(A, 'select vehicles_bundle() as j')).j
+check('vehicles_bundle: odometer readings, newest first', vehOdo.odometer.length > 0 && same(vehOdo.odometer, await direct(A, 'select * from odometer_logs order by logged_at desc limit 100')) && (await one(B, 'select vehicles_bundle() as j')).j.odometer.every(o => o.odometer_km !== 123), JSON.stringify(vehOdo.odometer.length))
 const segDirect = await direct(A, 'select * from vehicle_fuel_segments order by vehicle_id, ended_at desc')
 check('vehicles_bundle: fuel segments per vehicle, newest first, no helper column', veh.segments.length === Math.min(segDirect.length, 12 * veh.vehicles.length) && veh.segments.every(x => !('rn' in x)) && same(veh.segments, segDirect.slice(0, veh.segments.length)), JSON.stringify(veh.segments.length))
 const vId = veh.vehicles[0]?.id

@@ -1,8 +1,8 @@
 import { Suspense } from "react";
 import { getSession } from "@/lib/app/session";
-import { fuelFields, maintenanceFields, parkingFields, toOptions, vehicleFields } from "@/lib/app/forms";
+import { fuelFields, maintenanceFields, odometerFields, parkingFields, toOptions, vehicleFields } from "@/lib/app/forms";
 import { date, dateTime, day, dayWithYear, label, money, num } from "@/lib/format";
-import { createFuelLog, createMaintenanceLog, createParkingLog, createVehicle, deleteFuelLog, deleteMaintenanceLog, deleteParkingLog, deleteVehicle, updateFuelLog, updateMaintenanceLog, updateParkingLog, updateVehicle } from "@/lib/actions/vehicles";
+import { createFuelLog, createMaintenanceLog, createOdometerLog, createParkingLog, createVehicle, deleteFuelLog, deleteMaintenanceLog, deleteOdometerLog, deleteParkingLog, deleteVehicle, updateFuelLog, updateMaintenanceLog, updateOdometerLog, updateParkingLog, updateVehicle } from "@/lib/actions/vehicles";
 import { loadVehiclesPage } from "@/lib/services/vehicles";
 import { TrendChart } from "@/components/app/charts";
 import { DeleteButton } from "@/components/app/delete-button";
@@ -22,7 +22,7 @@ async function VehiclesContent() {
   const { db, today, currency, timezone } = await getSession();
   const rm = (n: number) => money(n, currency);
 
-  const { vehicles: vehicleRows, costs, fuel, maintenance, parking, details: detailOf } = await loadVehiclesPage(db, today);
+  const { vehicles: vehicleRows, costs, fuel, maintenance, parking, odometer, details: detailOf } = await loadVehiclesPage(db, today);
 
   if (vehicleRows.length === 0) {
     return (
@@ -202,6 +202,40 @@ async function VehiclesContent() {
     </Section>
   );
 
+  const odometerTab = (
+    <Section
+      id="odometer"
+      title="Odometer readings"
+      hint="A vehicle's odometer is its highest reading, including the ones on fill-ups and services. Delete a wrong reading here to bring it back down."
+      aside={<EntryDialog label="Add reading" fields={odometerFields(vehicleOptions)} action={createOdometerLog} />}
+    >
+      {odometer.length === 0 ? (
+        <Empty title="No readings yet">Add a reading whenever you want to record the odometer without a fill-up or a service.</Empty>
+      ) : (
+        <RowList>
+          {odometer.map((o, index) => {
+            // Readings are newest first: the next one for the same vehicle is the reading before this one.
+            const previous = odometer.slice(index + 1).find((other) => other.vehicle_id === o.vehicle_id);
+            const gained = previous ? o.odometer_km - previous.odometer_km : null;
+            return (
+              <Row
+                key={o.id}
+                title={nameOf.get(o.vehicle_id) ?? "Vehicle"}
+                meta={[dateTime(o.logged_at, timezone), o.note].filter(Boolean).join(" · ")}
+                value={`${num(o.odometer_km)} km`}
+                sub={gained === null ? undefined : `${gained >= 0 ? "+" : "−"}${num(Math.abs(gained))} km since the last`}
+                actions={<RowActions>
+<EntryDialog label="Edit reading" fields={odometerFields(vehicleOptions)} edit={{ id: o.id, values: o }} update={updateOdometerLog} />
+<DeleteButton id={o.id} what="reading" action={deleteOdometerLog} />
+</RowActions>}
+              />
+            );
+          })}
+        </RowList>
+      )}
+    </Section>
+  );
+
   return (
     <ModuleTabs
       tabs={[
@@ -209,6 +243,7 @@ async function VehiclesContent() {
         { id: "fuel", label: "Fuel", content: fuelTab },
         { id: "servicing", label: "Servicing", content: servicingTab },
         { id: "parking", label: "Parking", content: parkingTab },
+        { id: "odometer", label: "Odometer", content: odometerTab },
       ]}
     />
   );

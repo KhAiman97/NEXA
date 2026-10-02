@@ -114,11 +114,13 @@ export type VehiclesPage = {
   fuel: FuelLog[];
   maintenance: MaintenanceLog[];
   parking: ParkingLog[];
+  /** Odometer readings, newest first. */
+  odometer: OdometerLog[];
   /** Per vehicle: its latest 12 fuel segments (newest first) and what is due. */
   details: Map<string, { segments: FuelSegment[]; due: VehicleReminders }>;
 };
 
-type VehiclesBundle = Omit<VehiclesPage, "details"> & { segments: FuelSegment[]; latest_services: MaintenanceLog[] };
+type VehiclesBundle = Omit<VehiclesPage, "details" | "odometer"> & { odometer?: OdometerLog[]; segments: FuelSegment[]; latest_services: MaintenanceLog[] };
 
 /**
  * Everything the Vehicles page shows, in one round trip (the vehicles_bundle RPC). This also covers
@@ -136,5 +138,6 @@ export async function loadVehiclesPage(db: Db, today: string): Promise<VehiclesP
       },
     ]),
   );
-  return { ...lists, details };
+  // `?? []`: if the database function is a version behind the app, the page still loads, just without readings.
+  return { ...lists, odometer: lists.odometer ?? [], details };
 }

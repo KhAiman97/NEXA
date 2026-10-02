@@ -162,6 +162,13 @@ export const maintenanceFields = (vehicles: Option[]): Field[] => [
   ledger(),
 ];
 
+export const odometerFields = (vehicles: Option[]): Field[] => [
+  { name: "vehicle_id", label: "Vehicle", type: "select", required: true, half: true, options: vehicles, defaultValue: vehicles[0]?.value },
+  { name: "odometer_km", label: "Odometer (km)", type: "number", required: true, half: true, step: "1", hint: "The vehicle shows its highest reading." },
+  { name: "logged_at", label: "When", type: "datetime", required: true, defaultValue: "now" },
+  { name: "note", label: "Note", type: "text", placeholder: "Start of month" },
+];
+
 export const parkingFields = (vehicles: Option[]): Field[] => [
   { name: "vehicle_id", label: "Vehicle", type: "select", required: true, half: true, options: vehicles, defaultValue: vehicles[0]?.value },
   { name: "cost", label: "Cost", type: "number", half: true, step: "0.01", defaultValue: 0 },
