@@ -10,13 +10,19 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/dashboard",
     scope: "/",
     display: "standalone",
+    // Ordered fallbacks for browsers that don't do standalone.
+    display_override: ["standalone", "minimal-ui", "browser"],
     orientation: "portrait",
-    background_color: BRAND.background,
-    theme_color: BRAND.background,
+    background_color: BRAND.night,
+    theme_color: BRAND.night,
+    // A link into the app reuses the window that is already open instead of spawning a second one.
+    launch_handler: { client_mode: "navigate-existing" },
     categories: ["finance", "health", "lifestyle", "productivity"],
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
       { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      // Maskable: the mark sits inside the centre 80% so Android's icon shapes don't clip it.
+      { src: "/icons/maskable-192.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
       { src: "/icons/maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
   };

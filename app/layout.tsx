@@ -19,13 +19,15 @@ export const metadata: Metadata = {
   applicationName: BRAND.name,
   // iOS Safari ignores the manifest: these make "Add to Home Screen" open full-screen.
   appleWebApp: { capable: true, title: BRAND.shortName, statusBarStyle: "black-translucent" },
+  // Next only emits mobile-web-app-capable; iOS older than 16.4 needs the apple- one to open full-screen.
+  other: { "apple-mobile-web-app-capable": "yes" },
   formatDetection: { telephone: false },
 };
 
 export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: BRAND.desk },
-    { media: "(prefers-color-scheme: dark)", color: BRAND.background },
+    { media: "(prefers-color-scheme: dark)", color: BRAND.night },
   ],
   width: "device-width",
   initialScale: 1,

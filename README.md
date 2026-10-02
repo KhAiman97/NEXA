@@ -38,9 +38,10 @@ A PWA needs **HTTPS** (only `localhost` is exempt, and that's your laptop, not y
 - **iPhone / Safari:** Share → **Add to Home Screen**. (iOS has no install API; the app shows these steps.)
 
 The service worker only runs in production builds: use `npm run build && npm start` to test it locally.
+When a new build is deployed the app shows a **Reload** prompt; bump `VERSION` in `public/sw.js` whenever that file changes.
 Set `NEXT_PUBLIC_SITE_URL` to your deployed URL so metadata/OG links are correct.
 
-> The app is **online-only by design**: the service worker caches build assets and an offline page, never pages or API responses, so no financial data is stored in the browser cache. Offline logging would need a write queue (see roadmap).
+> The app is **online-only by design**: the service worker caches build assets, icons and an offline page, never pages or API responses, so no financial data is stored in the browser cache. Offline logging would need a write queue (see roadmap).
 
 ## Architecture
 

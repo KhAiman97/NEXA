@@ -80,8 +80,13 @@
   * {
     @apply border-border;
   }
+  html {
+    /* Installed, a pull-to-refresh bounce looks like the app crashing and there is no address bar to prove otherwise. */
+    overscroll-behavior-y: none;
+  }
   body {
     @apply bg-background font-sans text-foreground;
+    overscroll-behavior-y: none;
   }
   :focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-sheet;
@@ -100,6 +105,21 @@
 }
 
 @layer utilities {
+  /* viewportFit: cover puts the page under the notch and the home indicator: these keep fixed bars clear of both. */
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  /* Phone header: its 3.5rem row plus the notch above it. */
+  .h-header {
+    height: calc(3.5rem + env(safe-area-inset-top));
+  }
+  /* Room for the phone tab bar plus the home indicator under it. */
+  .pb-tabbar {
+    padding-bottom: calc(6rem + env(safe-area-inset-bottom));
+  }
   .meter-fill {
     transform-origin: left center;
     animation: meter-in 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
