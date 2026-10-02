@@ -1,10 +1,11 @@
 import "server-only";
 import type { z } from "zod";
 import { createCrud, selectView, type Db } from "../crud";
-import { fromPostgrest } from "../errors";
+import { fromPostgrest, ServiceError } from "../errors";
 import { callBundle } from "../bundle";
 import { withLinkedExpense } from "../finance/transactions";
 import {
+  fillAmounts,
   fuelLogInput,
   maintenanceInput,
   odometerInput,
@@ -25,17 +26,47 @@ export const fuelLogs = createCrud<FuelLog, Omit<FuelLog, "id" | "user_id" | "cr
 export const maintenanceLogs = createCrud<MaintenanceLog, Omit<MaintenanceLog, "id" | "user_id" | "created_at" | "updated_at">>({ table: "maintenance_logs", orderBy: "performed_on" });
 export const parkingLogs = createCrud<ParkingLog, Omit<ParkingLog, "id" | "user_id" | "created_at" | "updated_at">>({ table: "parking_logs", orderBy: "started_at" });
 
-const round = (n: number, dp: number) => Math.round(n * 10 ** dp) / 10 ** dp;
+/** Litres and cost for a fill-up, or a validation error the form can show. */
+function amountsOrThrow(input: Parameters<typeof fillAmounts>[0]) {
+  const amounts = fillAmounts(input);
+  if ("error" in amounts) throw new ServiceError("validation_error", amounts.error);
+  return amounts;
+}
 
-/** Fuel-up. total_cost defaults to liters × price; optionally mirrored into the ledger. */
+/** Fuel-up. Give the amount paid or the litres: the other comes from the price. Optionally mirrored into the ledger. */
 export async function logFuel(db: Db, input: z.infer<typeof fuelLogInput>): Promise<FuelLog> {
-  const { record_expense, total_cost, ...fill } = input;
-  const cost = total_cost ?? round(fill.liters * fill.price_per_liter, 2);
+  const { record_expense, ...fill } = input;
+  const { liters, total_cost } = amountsOrThrow(fill);
   return withLinkedExpense(
     db,
-    { title: `Fuel${fill.station ? ` – ${fill.station}` : ""}`, amount: cost, occurredAt: fill.filled_at, link: record_expense },
-    (transactionId) => fuelLogs.create(db, { ...fill, total_cost: cost, transaction_id: transactionId }),
+    { title: `Fuel${fill.station ? ` – ${fill.station}` : ""}`, amount: total_cost, occurredAt: fill.filled_at, link: record_expense },
+    (transactionId) => fuelLogs.create(db, { ...fill, liters, total_cost, transaction_id: transactionId }),
   );
+}
+
+/**
+ * Edit a fill-up, keeping litres, cost and price consistent. Whichever of litres and cost was changed
+ * (or left in place when the other was cleared) is kept and the other is worked out again. When only
+ * the price changes, the amount paid is the fact and the litres follow it.
+ */
+export async function updateFuel(db: Db, id: string, patch: Partial<Omit<z.infer<typeof fuelLogInput>, "record_expense">>): Promise<FuelLog> {
+  const current = await fuelLogs.get(db, id);
+  const price = patch.price_per_liter ?? Number(current.price_per_liter);
+  const changed = (next: number | null | undefined, was: number) => next !== undefined && (next === null || Number(next) !== Number(was));
+  const litersChanged = changed(patch.liters, current.liters);
+  const costChanged = changed(patch.total_cost, current.total_cost);
+  const priceChanged = price !== Number(current.price_per_liter);
+
+  let amounts: { liters: number; total_cost: number } | null = null;
+  if (litersChanged && costChanged) amounts = amountsOrThrow({ liters: patch.liters, total_cost: patch.total_cost, price_per_liter: price });
+  else if (litersChanged) amounts = amountsOrThrow(patch.liters == null ? { total_cost: Number(current.total_cost), price_per_liter: price } : { liters: patch.liters, price_per_liter: price });
+  else if (costChanged) amounts = amountsOrThrow(patch.total_cost == null ? { liters: Number(current.liters), price_per_liter: price } : { total_cost: patch.total_cost, price_per_liter: price });
+  else if (priceChanged) amounts = amountsOrThrow({ total_cost: Number(current.total_cost), price_per_liter: price });
+
+  const { liters: _liters, total_cost: _cost, ...rest } = patch;
+  void _liters;
+  void _cost;
+  return fuelLogs.update(db, id, amounts ? { ...rest, ...amounts } : rest);
 }
 
 export async function logMaintenance(db: Db, input: z.infer<typeof maintenanceInput>): Promise<MaintenanceLog> {

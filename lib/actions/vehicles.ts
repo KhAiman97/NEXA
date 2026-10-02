@@ -4,7 +4,7 @@ import { run, parse } from "./run";
 import { id, partialOf } from "@/lib/validators/common";
 import { fuelLogInput, maintenanceInput, odometerInput, parkingInput, vehicleInput } from "@/lib/validators/vehicles";
 import {
-  fuelLogs, logFuel, logMaintenance, logParking, maintenanceLogs, odometerLogs, parkingLogs, vehicles,
+  fuelLogs, logFuel, logMaintenance, logParking, maintenanceLogs, odometerLogs, parkingLogs, updateFuel, vehicles,
 } from "@/lib/services/vehicles";
 
 // Logs can mirror into the finance ledger, so refresh both areas.
@@ -19,7 +19,7 @@ export async function updateOdometerLog(logId: unknown, patch: unknown) { return
 export async function deleteOdometerLog(logId: unknown) { return run(({ db }) => odometerLogs.remove(db, parse(id, logId)), V); }
 
 export async function createFuelLog(input: unknown) { return run(({ db }) => logFuel(db, parse(fuelLogInput, input)), V); }
-export async function updateFuelLog(logId: unknown, patch: unknown) { return run(({ db }) => fuelLogs.update(db, parse(id, logId), parse(partialOf(fuelLogInput.omit({ record_expense: true })), patch)), V); }
+export async function updateFuelLog(logId: unknown, patch: unknown) { return run(({ db }) => updateFuel(db, parse(id, logId), parse(partialOf(fuelLogInput.omit({ record_expense: true })), patch)), V); }
 export async function deleteFuelLog(logId: unknown) { return run(({ db }) => fuelLogs.remove(db, parse(id, logId)), V); }
 
 export async function createMaintenanceLog(input: unknown) { return run(({ db }) => logMaintenance(db, parse(maintenanceInput, input)), V); }

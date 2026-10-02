@@ -22,14 +22,34 @@ export const odometerInput = z.object({
   note: c.optionalText,
 });
 
+/** RON95 at the pump: the price the fill-up form starts with. */
+export const DEFAULT_FUEL_PRICE = 1.99;
+
+const round = (n: number, dp: number) => Math.round(n * 10 ** dp) / 10 ** dp;
+
+/**
+ * A fill-up is stored with both litres and cost, but the form asks for only one of them (the amount
+ * paid, by default). Works out the missing one from the price per litre. With both given, both are kept.
+ */
+export function fillAmounts(input: { liters?: number | null; total_cost?: number | null; price_per_liter: number }): { liters: number; total_cost: number } | { error: string } {
+  const { liters, total_cost: cost, price_per_liter: price } = input;
+  if (liters == null && cost == null) return { error: "Enter the amount paid or the litres." };
+  if (liters != null) return { liters, total_cost: cost ?? round(liters * price, 2) };
+  if (!(price > 0)) return { error: "Enter the price per litre so the litres can be worked out." };
+  const worked = round(cost! / price, 3);
+  if (!(worked > 0)) return { error: "The amount paid must be more than 0." };
+  if (worked > 1000) return { error: "That amount is too large for one fill-up." };
+  return { liters: worked, total_cost: cost! };
+}
+
 export const fuelLogInput = z.object({
   vehicle_id: c.id,
   filled_at: c.timestamptz.default(() => new Date().toISOString()),
   odometer_km: c.nonNegInt,
-  liters: z.number().positive().max(1000),
-  price_per_liter: c.nonNegNumber.max(100),
-  /** If omitted it is computed as liters × price_per_liter. */
-  total_cost: c.money.optional(),
+  /** Litres or total_cost: one is enough, see fillAmounts. */
+  liters: z.number().positive().max(1000).nullish(),
+  price_per_liter: c.nonNegNumber.max(100).default(DEFAULT_FUEL_PRICE),
+  total_cost: c.money.nullish(),
   is_full_tank: z.boolean().default(true),
   station: c.optionalText,
   fuel_grade: z.string().trim().max(50).nullish(),
@@ -68,7 +88,7 @@ export const parkingInput = z.object({
 
 export type Vehicle = RowOf<typeof vehicleInput>;
 export type OdometerLog = RowOf<typeof odometerInput>;
-export type FuelLog = Omit<RowOf<typeof fuelLogInput>, "record_expense"> & { total_cost: number; transaction_id: string | null };
+export type FuelLog = Omit<RowOf<typeof fuelLogInput>, "record_expense"> & { liters: number; total_cost: number; transaction_id: string | null };
 export type MaintenanceLog = Omit<RowOf<typeof maintenanceInput>, "record_expense"> & { transaction_id: string | null };
 export type ParkingLog = Omit<RowOf<typeof parkingInput>, "record_expense"> & { transaction_id: string | null };
 

@@ -2,6 +2,8 @@
  * Field descriptions for the entry forms. They are plain data so a server page can hand them to the
  * client-side dialog; the server action re-validates every submission with its Zod schema.
  */
+import { DEFAULT_FUEL_PRICE } from "@/lib/validators/vehicles";
+
 export type Option = { value: string; label: string };
 
 export type Field = {
@@ -32,7 +34,8 @@ const opts = (values: readonly string[]): Option[] =>
 
 export const toOptions = (rows: { id: string; name: string }[]): Option[] => rows.map((r) => ({ value: r.id, label: r.name }));
 
-const ledger = (hint = "Adds a matching expense to your transactions."): Field => ({ name: "record_expense", label: "Also record this as an expense in Finance", type: "ledger", hint });
+// Ticked by default: money spent on a fill-up, service, parking, court or payment is an expense unless you say otherwise.
+const ledger = (hint = "Adds a matching expense to your transactions."): Field => ({ name: "record_expense", label: "Also record this as an expense in Finance", type: "ledger", defaultValue: true, hint });
 
 // ---------------------------------------------------------------- finance
 
@@ -142,8 +145,9 @@ export const fuelFields = (vehicles: Option[]): Field[] => [
   { name: "vehicle_id", label: "Vehicle", type: "select", required: true, half: true, options: vehicles, defaultValue: vehicles[0]?.value },
   { name: "filled_at", label: "When", type: "datetime", required: true, half: true, defaultValue: "now" },
   { name: "odometer_km", label: "Odometer (km)", type: "number", required: true, half: true, step: "1" },
-  { name: "liters", label: "Litres", type: "number", required: true, half: true, step: "0.001", min: 0.001 },
-  { name: "price_per_liter", label: "Price per litre", type: "number", required: true, half: true, step: "0.001" },
+  { name: "total_cost", label: "Amount paid", type: "number", half: true, step: "0.01", min: 0.01, placeholder: "50.00", hint: "Or leave empty and enter the litres." },
+  { name: "price_per_liter", label: "Price per litre", type: "number", required: true, half: true, step: "0.001", defaultValue: DEFAULT_FUEL_PRICE },
+  { name: "liters", label: "Litres", type: "number", half: true, step: "0.001", min: 0.001, hint: "Leave empty to work it out from the amount paid." },
   { name: "station", label: "Station", type: "text", half: true },
   { name: "is_full_tank", label: "Filled to full", type: "checkbox", defaultValue: true, hint: "Fuel economy is measured between two full tanks." },
   ledger(),

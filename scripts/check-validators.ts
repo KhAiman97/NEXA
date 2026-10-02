@@ -2,7 +2,7 @@
 import { partialOf } from "../lib/validators/common";
 import { accountInput, transactionInput, monthlyGoalInput } from "../lib/validators/finance";
 import { projectInput } from "../lib/validators/projects";
-import { fuelLogInput } from "../lib/validators/vehicles";
+import { fillAmounts, fuelLogInput } from "../lib/validators/vehicles";
 
 let failed = 0;
 const check = (name: string, ok: boolean, detail?: unknown) => {
@@ -37,6 +37,17 @@ check("expense_tag normalised to lowercase", projectInput.parse({ name: "n", exp
 check("bad expense_tag rejected", !projectInput.safeParse({ name: "n", expense_tag: "has space" }).success);
 check("non-uuid ids rejected", !transactionInput.safeParse({ type: "expense", amount: 1, title: "t", account_id: "123" }).success);
 check("fuel: total_cost optional", fuelLogInput.safeParse({ vehicle_id: crypto.randomUUID(), odometer_km: 100, liters: 30, price_per_liter: 2.05 }).success);
+
+// 5. Fill-ups: the amount paid or the litres, with the other worked out from the price
+const paid = fuelLogInput.safeParse({ vehicle_id: crypto.randomUUID(), odometer_km: 100, total_cost: 50 });
+check("fuel: amount alone is enough, price defaults to 1.99", paid.success && paid.data.price_per_liter === 1.99 && paid.data.liters == null);
+const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+check("fuel: RM 50 at 1.99 is 25.126 L", same(fillAmounts({ total_cost: 50, price_per_liter: 1.99 }), { liters: 25.126, total_cost: 50 }));
+check("fuel: 30 L at 2.05 is RM 61.50", same(fillAmounts({ liters: 30, price_per_liter: 2.05 }), { liters: 30, total_cost: 61.5 }));
+check("fuel: both given are both kept", same(fillAmounts({ liters: 30, total_cost: 60, price_per_liter: 2.05 }), { liters: 30, total_cost: 60 }));
+check("fuel: neither given is an error", "error" in fillAmounts({ price_per_liter: 1.99 }));
+check("fuel: amount with no price is an error", "error" in fillAmounts({ total_cost: 50, price_per_liter: 0 }));
+check("fuel: a zero amount is an error", "error" in fillAmounts({ total_cost: 0, price_per_liter: 1.99 }));
 
 console.log(failed ? `\n${failed} FAILED` : "\nall passed");
 process.exit(failed ? 1 : 0);
