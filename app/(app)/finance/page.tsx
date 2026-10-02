@@ -44,7 +44,7 @@ import {
 import { selectView } from "@/lib/services/crud";
 import { getOverview } from "@/lib/services/finance/overview";
 import { accounts, categories } from "@/lib/services/finance/reference";
-import { listTransactions } from "@/lib/services/finance/transactions";
+import { listTransactionsPage } from "@/lib/services/finance/transactions";
 import { subscriptions, summarize } from "@/lib/services/finance/subscriptions";
 import { liabilities, listLiabilityBalances } from "@/lib/services/finance/liabilities";
 import { assets, listWithValues } from "@/lib/services/finance/assets";
@@ -55,20 +55,24 @@ import { DeleteButton } from "@/components/app/delete-button";
 import { EntryDialog } from "@/components/app/entry-dialog";
 import { LogoLoader } from "@/components/app/logo";
 import { ModuleTabs } from "@/components/app/module-tabs";
+import { Pager } from "@/components/app/pager";
 import { RowActions, Empty, Figure, Meter, ModulePage, Panel, Pill, Row, RowList, Section, Table, Td } from "@/components/app/ui";
 
 export const metadata = { title: "Finance" };
 
 type Cashflow = { month: string; income: number; expense: number; net: number };
 
-async function FinanceContent() {
-  const { db, today, currency, timezone } = await getSession();
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
+
+async function FinanceContent({ searchParams }: { searchParams: SearchParams }) {
+  const [{ db, today, currency, timezone }, params] = await Promise.all([getSession(), searchParams]);
+  const page = Number.parseInt(String(params.page ?? "1"), 10) || 1;
   const rm = (n: number) => money(n, currency);
 
-  const [overview, cashflowRows, recent, categoryRows, accountRows, subscriptionRows, subscriptionTotals, liabilityRows, balances, assetRows, assetRecords, goalRows] = await Promise.all([
+  const [overview, cashflowRows, ledger, categoryRows, accountRows, subscriptionRows, subscriptionTotals, liabilityRows, balances, assetRows, assetRecords, goalRows] = await Promise.all([
     getOverview(db, monthOf(today)),
     selectView<Cashflow>(db, "monthly_cashflow", { orderBy: "month", ascending: false, limit: 6 }),
-    listTransactions(db, { limit: 20 }),
+    listTransactionsPage(db, page),
     categories.list(db, { limit: 500 }),
     accounts.list(db, { limit: 500 }),
     subscriptions.list(db, { limit: 500 }),
@@ -137,15 +141,16 @@ async function FinanceContent() {
 
       <Section
         id="transactions"
-        title="Recent transactions"
-        hint="The latest 20 entries across all accounts."
+        title="Transactions"
+        hint={ledger.total > ledger.pageSize ? `${num(ledger.total)} entries across all accounts, newest first.` : "Every entry across all accounts, newest first."}
         aside={<EntryDialog label="Add transaction" fields={transactionFields(categoryOptions, accountOptions)} action={createTransaction} />}
       >
-        {recent.length === 0 ? (
+        {ledger.total === 0 ? (
           <Empty title="No transactions yet">Add your first income or expense to start the ledger.</Empty>
         ) : (
+          <>
           <RowList>
-            {recent.map((t) => (
+            {ledger.rows.map((t) => (
               <Row
                 key={t.id}
                 title={t.title}
@@ -158,6 +163,8 @@ async function FinanceContent() {
               />
             ))}
           </RowList>
+          <Pager page={ledger.page} pages={ledger.pages} total={ledger.total} pageSize={ledger.pageSize} path="/finance" noun="Transactions" />
+          </>
         )}
       </Section>
     </>
@@ -385,11 +392,11 @@ async function FinanceContent() {
   );
 }
 
-export default function FinancePage() {
+export default function FinancePage({ searchParams }: { searchParams: SearchParams }) {
   return (
     <ModulePage module="finance" title="Finance" lede="This month's money, what recurs, what is owed and what is owned.">
       <Suspense fallback={<LogoLoader />}>
-        <FinanceContent />
+        <FinanceContent searchParams={searchParams} />
       </Suspense>
     </ModulePage>
   );

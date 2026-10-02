@@ -133,5 +133,29 @@ await as(A, `update goals set current_amount=100`)
 const after = (await as(A, 'select updated_at from goals')).rows[0].updated_at
 check('updated_at advances on update', after > before)
 
+// Read RPCs (migration 10): one round trip each, still behind RLS
+await as(A, `insert into transactions (type,amount,title,occurred_at) values
+  ('income',100,'p1','2031-05-01T10:00:00+08'),('expense',10,'p2','2031-05-02T10:00:00+08'),('expense',20,'p3','2031-05-03T10:00:00+08')`)
+const aCount = (await as(A, 'select count(*)::int n from transactions')).rows[0].n
+const pg1 = (await as(A, 'select transactions_page(2, 0) as p')).rows[0].p
+const pg2 = (await as(A, 'select transactions_page(2, 2) as p')).rows[0].p
+check('transactions_page: total is the caller row count', pg1.total === aCount, JSON.stringify({ total: pg1.total, aCount }))
+check('transactions_page: newest first, limit respected', pg1.rows.length === 2 && pg1.rows[0].title === 'p3' && pg1.rows[1].title === 'p2', JSON.stringify(pg1.rows.map(r => r.title)))
+check('transactions_page: pages do not overlap', pg2.rows.every(r => !pg1.rows.some(q => q.id === r.id)) && pg2.rows[0].title === 'p1')
+const pgB = (await as(B, 'select transactions_page(100, 0) as p')).rows[0].p
+check('transactions_page: other users see none of it', pgB.rows.every(r => !['p1', 'p2', 'p3'].includes(r.title)) && pgB.total === pgB.rows.length, JSON.stringify(pgB.total))
+check('transactions_page: empty page is [] not null', Array.isArray((await as(A, 'select transactions_page(20, 9999) as p')).rows[0].p.rows))
+await as(A, `insert into monthly_goals (month,income_target,expense_limit) values ('2031-05-01',500,300)`)
+const ov = (await as(A, `select * from finance_overview('2031-05-01')`)).rows
+check('finance_overview: month totals and targets in one row', ov.length === 1 && Number(ov[0].income) === 100 && Number(ov[0].expense) === 30 && Number(ov[0].income_target) === 500 && Number(ov[0].expense_limit) === 300, JSON.stringify(ov))
+const worthNow = (await as(A, 'select net_worth from net_worth')).rows[0]
+check('finance_overview: net worth matches the view', Number(ov[0].net_worth) === Number(worthNow?.net_worth ?? 0), JSON.stringify([ov[0].net_worth, worthNow]))
+const ovB = (await as(B, `select * from finance_overview('2031-05-01')`)).rows
+check('finance_overview: other users get zeros for that month', ovB.length === 1 && Number(ovB[0].income) === 0 && Number(ovB[0].income_target) === 0, JSON.stringify(ovB))
+await db.exec('set role anon')
+let anonErr = null
+try { await db.query('select transactions_page(1, 0)') } catch (e) { anonErr = e.message } finally { await db.exec('reset role') }
+check('RPCs are not executable by anon', !!anonErr, String(anonErr))
+
 console.log(`\n${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)

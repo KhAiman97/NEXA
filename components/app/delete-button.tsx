@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import type { ActionResult } from "@/lib/actions/run";
 
 /** Two-step delete: the first click arms the button, the second one deletes. It disarms after a few seconds. */
@@ -25,7 +26,12 @@ export function DeleteButton({ id, what, action }: { id: string; what: string; a
     startTransition(async () => {
       const result = await action(id);
       setArmed(false);
-      if (result.error) setFailed(true);
+      if (result.error) {
+        setFailed(true);
+        toast.error(`Could not delete ${what}`, { description: result.error.message });
+      } else {
+        toast.success(`Deleted ${what}`);
+      }
     });
   };
 

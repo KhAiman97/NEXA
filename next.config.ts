@@ -2,6 +2,12 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
+  experimental: {
+    // Client cache, in browser memory only: going back to a page within a minute reuses what was loaded
+    // instead of asking the server again. Any save or delete purges it (revalidatePath in lib/actions/run.ts),
+    // and signing out does a full page load, so nothing outlives the session.
+    staleTimes: { dynamic: 60, static: 300 },
+  },
   async headers() {
     return [
       {

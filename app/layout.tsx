@@ -3,6 +3,7 @@ import { Bricolage_Grotesque, DM_Mono, Instrument_Sans } from "next/font/google"
 import { ThemeProvider } from "next-themes";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
 import { RegisterServiceWorker } from "@/components/pwa/register-sw";
+import { Toaster } from "@/components/ui/sonner";
 import { BRAND } from "@/lib/pwa/icon";
 import "./globals.css";
 
@@ -55,6 +56,7 @@ export default function RootLayout({
         >
           {children}
           <InstallPrompt />
+          <Toaster />
         </ThemeProvider>
         <RegisterServiceWorker />
       </body>

@@ -22,6 +22,31 @@ export function listTransactions(db: Db, query: z.infer<typeof transactionQuery>
   return transactions.list(db, { filter, range: { column: "occurred_at", from, to }, limit, offset });
 }
 
+export const TRANSACTIONS_PAGE_SIZE = 20;
+
+export type TransactionsPage = { rows: Transaction[]; total: number; page: number; pages: number; pageSize: number };
+
+/**
+ * One page of the ledger, newest first, plus the total for the pager: a single round trip
+ * (the transactions_page RPC). A page past the end, e.g. after deleting the last row on the
+ * last page, falls back to the last page that exists.
+ */
+export async function listTransactionsPage(db: Db, page: number, pageSize = TRANSACTIONS_PAGE_SIZE): Promise<TransactionsPage> {
+  const fetchPage = async (n: number) => {
+    const { data, error } = await db.rpc("transactions_page", { p_limit: pageSize, p_offset: (n - 1) * pageSize });
+    if (error) throw fromPostgrest(error);
+    const result = data as { total: number; rows: Transaction[] };
+    return { rows: result.rows, total: Number(result.total) };
+  };
+
+  const wanted = Math.max(1, Math.floor(page) || 1);
+  let { rows, total } = await fetchPage(wanted);
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  const current = Math.min(wanted, pages);
+  if (current !== wanted) ({ rows, total } = await fetchPage(current));
+  return { rows, total, page: current, pages, pageSize };
+}
+
 type ExpenseSpec = {
   title: string;
   amount: number;

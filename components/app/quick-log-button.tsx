@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import type { ActionResult } from "@/lib/actions/run";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +26,8 @@ export function QuickLogButton({
     startTransition(async () => {
       const result = await action({ goal_id: goalId, amount });
       setFailed(Boolean(result.error));
+      if (result.error) toast.error("Not saved", { description: result.error.message });
+      else toast.success(`Logged ${amount}`);
     });
 
   return (

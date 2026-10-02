@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 const CONTROL = "w-full min-w-0 rounded-lg border border-input bg-card px-3 text-base transition-colors focus-visible:border-ring md:text-sm";
 
@@ -159,8 +160,12 @@ export function EntryDialog({
     const payload = toPayload(new FormData(event.currentTarget), fields, fixed, edit?.values);
     startTransition(async () => {
       const result = edit && update ? await update(edit.id, payload) : action ? await action(payload) : { error: { code: "internal" as const, message: "This form is not connected to anything." } };
-      if (result.error) setError(result.error.message);
-      else setOpen(false);
+      if (result.error) {
+        setError(result.error.message);
+        return;
+      }
+      setOpen(false);
+      toast.success(edit ? "Changes saved" : "Saved", { description: label });
     });
   };
 
