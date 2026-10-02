@@ -19,7 +19,11 @@ export type SubscriptionSummary = {
 
 /** Normalised recurring spend (uses the generated `monthly_cost` column) for active subscriptions. */
 export async function summarize(db: Db): Promise<SubscriptionSummary> {
-  const active = await subscriptions.list(db, { filter: { is_active: true }, limit: 500 });
+  return summarizeRows(await subscriptions.list(db, { filter: { is_active: true }, limit: 500 }));
+}
+
+/** The same totals from rows already in hand (the page RPCs return the subscriptions with everything else). */
+export function summarizeRows(active: Subscription[]): SubscriptionSummary {
   const byKind = new Map<Subscription["kind"], { monthly: number; count: number }>();
   let monthlyTotal = 0;
   for (const s of active) {

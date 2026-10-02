@@ -4,7 +4,7 @@ import { getSession } from "@/lib/app/session";
 import { drinkFields, foodFields, foodLogFields, nutritionGoalFields, toOptions } from "@/lib/app/forms";
 import { addDays, day, label, longDay, num, time } from "@/lib/format";
 import { createFood, createFoodLog, createHydrationLog, deleteFood, deleteFoodLog, deleteHydrationLog, logMenuFood, saveMenuFood, saveNutritionGoal, updateFood, updateFoodLog, updateHydrationLog } from "@/lib/actions/nutrition";
-import { foods, getDaySummary, listHydrationTrend } from "@/lib/services/nutrition";
+import { loadNutritionPage } from "@/lib/services/nutrition";
 import type { FoodLog } from "@/lib/validators/nutrition";
 import { Amount } from "@/components/app/amount";
 import { GoalBarChart } from "@/components/app/charts";
@@ -28,11 +28,7 @@ async function NutritionContent() {
     return <Empty title="Your profile is not set up yet">Food and drink are grouped by your local day, which needs a profile with a timezone. Ask the administrator to create one for this account.</Empty>;
   }
 
-  const [summary, trend, foodRows] = await Promise.all([
-    getDaySummary(db, session.userId, today),
-    listHydrationTrend(db, addDays(today, -(TREND_DAYS - 1)), today),
-    foods.list(db, { limit: 200 }),
-  ]);
+  const { summary, trend, foods: foodRows } = await loadNutritionPage(db, today, timezone, addDays(today, -(TREND_DAYS - 1)));
 
   const goal = summary.goal;
   const eaten = summary.nutrition ?? { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0, entries: 0 };

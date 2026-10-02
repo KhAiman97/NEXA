@@ -1,8 +1,8 @@
 import "server-only";
 import type { z } from "zod";
-import { createCrud, selectView, type Db } from "../crud";
+import { createCrud, type Db } from "../crud";
 import { fromPostgrest, ServiceError } from "../errors";
-import { getProfile } from "../profile";
+import { callBundle } from "../bundle";
 import { zonedDayRange } from "@/lib/utils/time";
 import {
   foodInput,
@@ -71,21 +71,17 @@ export type DaySummary = {
   drinks: HydrationLog[];
 };
 
-/** Everything for one local day: macros, fluid, caffeine and goal headroom, plus the raw entries. */
-export async function getDaySummary(db: Db, userId: string, day: string): Promise<DaySummary> {
-  const profile = await getProfile(db, userId);
-  const { from, to } = zonedDayRange(day, profile.timezone);
+/** What the nutrition_day RPC returns: the day's two total rows, the goal, and the raw entries newest first. */
+export type DayParts = {
+  nutrition: DailyNutrition | null;
+  hydration: DailyHydration | null;
+  goal: NutritionGoal | null;
+  food_logs: FoodLog[];
+  drinks: HydrationLog[];
+};
 
-  const [nutrition, hydration, goal, foodRows, drinkRows] = await Promise.all([
-    selectView<DailyNutrition>(db, "daily_nutrition", { filter: { day }, limit: 1 }),
-    selectView<DailyHydration>(db, "daily_hydration", { filter: { day }, limit: 1 }),
-    getNutritionGoal(db),
-    foodLogs.list(db, { range: { column: "logged_at", from, to }, limit: 500 }),
-    hydrationLogs.list(db, { range: { column: "logged_at", from, to }, limit: 500 }),
-  ]);
-
-  const n = nutrition[0] ?? null;
-  const h = hydration[0] ?? null;
+export function toDaySummary(day: string, parts: DayParts): DaySummary {
+  const { nutrition: n, hydration: h, goal } = parts;
   return {
     day,
     nutrition: n && { calories: Number(n.calories), protein_g: Number(n.protein_g), carbs_g: Number(n.carbs_g), fat_g: Number(n.fat_g), entries: n.entries },
@@ -96,9 +92,29 @@ export async function getDaySummary(db: Db, userId: string, day: string): Promis
       water_ml: goal ? goal.water_ml - Number(h?.total_volume_ml ?? 0) : null,
       caffeine_mg: goal ? goal.caffeine_limit_mg - Number(h?.total_caffeine_mg ?? 0) : null,
     },
-    foodLogs: foodRows,
-    drinks: drinkRows,
+    foodLogs: parts.food_logs,
+    drinks: parts.drinks,
   };
+}
+
+/** Everything for one local day: macros, fluid, caffeine and goal headroom, plus the raw entries. One round trip. */
+export async function getDaySummary(db: Db, day: string, timezone: string): Promise<DaySummary> {
+  const { from, to } = zonedDayRange(day, timezone);
+  return toDaySummary(day, await callBundle<DayParts>(db, "nutrition_day", { p_day: day, p_from: from, p_to: to }));
+}
+
+export type NutritionPage = { summary: DaySummary; trend: DailyHydration[]; foods: Food[] };
+
+/** Everything the Nutrition page shows, in one round trip (the nutrition_bundle RPC). */
+export async function loadNutritionPage(db: Db, day: string, timezone: string, trendFrom: string): Promise<NutritionPage> {
+  const { from, to } = zonedDayRange(day, timezone);
+  const bundle = await callBundle<{ day: DayParts; trend: DailyHydration[]; foods: Food[] }>(db, "nutrition_bundle", {
+    p_day: day,
+    p_from: from,
+    p_to: to,
+    p_trend_from: trendFrom,
+  });
+  return { summary: toDaySummary(day, bundle.day), trend: bundle.trend, foods: bundle.foods };
 }
 
 /** Daily fluid + caffeine trend between two local dates (inclusive). */

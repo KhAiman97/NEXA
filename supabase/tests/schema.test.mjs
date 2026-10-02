@@ -1,21 +1,27 @@
 // Applies every migration to an in-memory Postgres (PGlite, with Supabase's auth schema stubbed)
 // and asserts RLS, constraints and view logic. Run: npm run test:schema
 import { PGlite } from '@electric-sql/pglite'
+import { pg_trgm } from '@electric-sql/pglite/contrib/pg_trgm'
 import { readdirSync, readFileSync } from 'node:fs'
 
 const dir = new URL('../migrations', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
-const db = new PGlite()
+const db = new PGlite({ extensions: { pg_trgm } })
 
 // Stub the bits of Supabase the migrations rely on.
 await db.exec(`
   create schema auth;
+  create schema extensions;
   create table auth.users (id uuid primary key default gen_random_uuid(), email text, raw_user_meta_data jsonb);
   create or replace function auth.uid() returns uuid language sql stable as
     $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
+  create or replace function auth.jwt() returns jsonb language sql stable as
+    $$ select jsonb_build_object('sub', nullif(current_setting('request.jwt.claim.sub', true), ''), 'email', nullif(current_setting('request.jwt.claim.email', true), '')) $$;
   create role authenticated nologin;
   create role anon nologin;
   grant usage on schema auth to authenticated;
   grant execute on function auth.uid() to authenticated;
+  grant execute on function auth.jwt() to authenticated;
+  grant usage on schema extensions to authenticated;
 `)
 
 for (const f of readdirSync(dir).sort()) {
@@ -156,6 +162,80 @@ await db.exec('set role anon')
 let anonErr = null
 try { await db.query('select transactions_page(1, 0)') } catch (e) { anonErr = e.message } finally { await db.exec('reset role') }
 check('RPCs are not executable by anon', !!anonErr, String(anonErr))
+
+// Page bundles (migration 11): each returns what the separate requests returned, in one call
+const one = async (uid, sql) => (await as(uid, sql)).rows[0]
+const ses = (await one(A, 'select app_session() as j')).j
+check('app_session: verified user id and profile settings', ses.user_id === A && ses.profile && typeof ses.profile.timezone === 'string' && typeof ses.profile.currency === 'string', JSON.stringify(ses))
+
+await as(A, `insert into transactions (type,amount,title,occurred_at) values ('expense',7,'Kopi 50% off_deal','2031-05-04T10:00:00+08')`)
+const tp = async (uid, args) => (await one(uid, `select transactions_page(${args}) as j`)).j
+const inc = await tp(A, `10, 0, 'income'`)
+check('transactions_page: type filter runs in the database', inc.rows.length > 0 && inc.rows.every(r => r.type === 'income') && inc.total === inc.rows.length, JSON.stringify(inc.total))
+check('transactions_page: totals follow the filter', Number(inc.expense) === 0 && Number(inc.income) === inc.rows.reduce((n, r) => n + Number(r.amount), 0), JSON.stringify([inc.income, inc.expense]))
+const found = await tp(A, `10, 0, null, null, null, 'KOPI'`)
+check('transactions_page: search is case-insensitive', found.total === 1 && found.rows[0].title === 'Kopi 50% off_deal', JSON.stringify(found.rows.map(r => r.title)))
+check('transactions_page: % and _ in a search are literal', (await tp(A, `10, 0, null, null, null, '50% off_d'`)).total === 1 && (await tp(A, `10, 0, null, null, null, '%'`)).total === 1 && (await tp(A, `10, 0, null, null, null, 'p_'`)).total === 0)
+const aAccId = (await one(A, `insert into finance_accounts (name) values ('RPC-bank') returning id`)).id
+await as(A, `insert into transactions (type,amount,title,account_id,occurred_at) values ('expense',3,'acc-filter','${aAccId}','2031-04-01T10:00:00+08')`)
+const byAcc = await tp(A, `10, 0, null, null, '${aAccId}'`)
+check('transactions_page: account filter', byAcc.total >= 1 && byAcc.rows.every(r => r.account_id === aAccId), JSON.stringify(byAcc.total))
+const ranged = await tp(A, `10, 0, null, null, null, null, '2031-05-02T00:00:00+08', '2031-05-03T00:00:00+08'`)
+check('transactions_page: date range is from-inclusive, to-exclusive', ranged.total === 1 && ranged.rows[0].title === 'p2', JSON.stringify(ranged.rows.map(r => r.title)))
+
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b)
+const ids = rows => rows.map(r => r.id ?? r.project_id ?? r.vehicle_id ?? r.liability_id ?? r.asset_id)
+const direct = async (uid, sql) => (await as(uid, `select coalesce(jsonb_agg(to_jsonb(x)), '[]'::jsonb) as j from (${sql}) x`)).rows[0].j
+
+const fin = (await one(A, `select finance_bundle('2031-05-01', 2, 0) as j`)).j
+check('finance_bundle: every section present', ['overview', 'cashflow', 'ledger', 'categories', 'accounts', 'subscriptions', 'liabilities', 'balances', 'asset_values', 'assets', 'goals'].every(k => k in fin), Object.keys(fin).join())
+check('finance_bundle: overview matches finance_overview', Number(fin.overview.income) === 100 && Number(fin.overview.expense) === 37 && Number(fin.overview.income_target) === 500, JSON.stringify(fin.overview))
+check('finance_bundle: ledger is the paged RPC', fin.ledger.rows.length === 2 && same(fin.ledger, await tp(A, '2, 0')))
+check('finance_bundle: accounts match the table, by name', same(fin.accounts, await direct(A, 'select * from finance_accounts order by name limit 500')) && fin.accounts.length > 0)
+check('finance_bundle: balances and asset values match the views', same(fin.balances, await direct(A, 'select * from liability_balances order by name limit 100')) && same(fin.asset_values, await direct(A, 'select * from asset_latest_values order by name limit 100')))
+check('finance_bundle: cashflow newest month first', same(fin.cashflow, await direct(A, 'select * from monthly_cashflow order by month desc limit 6')) && fin.cashflow.length > 0)
+const finB = (await one(B, `select finance_bundle('2031-05-01') as j`)).j
+check('finance_bundle: other users see only their own', finB.accounts.every(a => a.name !== 'A-bank') && finB.ledger.rows.every(r => !['p1', 'p2', 'p3'].includes(r.title)))
+
+const veh = (await one(A, 'select vehicles_bundle() as j')).j
+check('vehicles_bundle: lists match the tables and views', same(veh.vehicles, await direct(A, 'select * from vehicles order by name limit 100')) && same(veh.costs, await direct(A, 'select * from vehicle_running_costs order by name limit 100')) && same(veh.fuel, await direct(A, 'select * from fuel_logs order by filled_at desc limit 15')), JSON.stringify(ids(veh.vehicles)))
+const segDirect = await direct(A, 'select * from vehicle_fuel_segments order by vehicle_id, ended_at desc')
+check('vehicles_bundle: fuel segments per vehicle, newest first, no helper column', veh.segments.length === Math.min(segDirect.length, 12 * veh.vehicles.length) && veh.segments.every(x => !('rn' in x)) && same(veh.segments, segDirect.slice(0, veh.segments.length)), JSON.stringify(veh.segments.length))
+const vId = veh.vehicles[0]?.id
+if (vId) {
+  await as(A, `insert into maintenance_logs (vehicle_id,kind,performed_on,cost) values ('${vId}','oil_change','2031-01-01',10),('${vId}','oil_change','2031-03-01',10),('${vId}','tyres','2031-02-01',10)`)
+  const latest = (await one(A, 'select vehicles_bundle() as j')).j.latest_services.filter(m => m.vehicle_id === vId && ['oil_change', 'tyres'].includes(m.kind) && m.performed_on >= '2031-01-01')
+  check('vehicles_bundle: only the latest service of each kind', latest.length === 2 && latest.find(m => m.kind === 'oil_change').performed_on === '2031-03-01', JSON.stringify(latest.map(m => [m.kind, m.performed_on])))
+}
+
+const prj = (await one(A, 'select projects_bundle() as j')).j
+check('projects_bundle: matches the three requests', same(prj.projects, await direct(A, 'select * from projects order by created_at desc limit 200')) && same(prj.costs, await direct(A, 'select * from project_cost_summary order by name limit 100')) && same(prj.inventory, await direct(A, 'select * from inventory_items order by name limit 500')), JSON.stringify([prj.projects.length, prj.inventory.length]))
+
+const nut = (await one(A, `select nutrition_bundle('2026-03-02', '2026-03-01T16:00:00Z', '2026-03-02T16:00:00Z', '2026-02-17') as j`)).j
+const dhDirect = (await as(A, `select * from daily_hydration where day = '2026-03-02'`)).rows[0]
+check('nutrition_bundle: day totals match the views', nut.day.hydration && Number(nut.day.hydration.total_volume_ml) === Number(dhDirect.total_volume_ml) && same(nut.trend, await direct(A, `select * from daily_hydration where day >= '2026-02-17' and day <= '2026-03-02' order by day`)), JSON.stringify(nut.day.hydration))
+check('nutrition_bundle: the day’s raw entries, newest first', same(nut.day.drinks, await direct(A, `select * from hydration_logs where logged_at >= '2026-03-01T16:00:00Z' and logged_at < '2026-03-02T16:00:00Z' order by logged_at desc limit 500`)) && nut.day.drinks.length > 0 && same(nut.foods, await direct(A, 'select * from foods order by name limit 200')))
+
+const fit = (await one(A, `select fitness_bundle('2031-05-04', '2031-05-03T16:00:00Z', '2031-05-04T16:00:00Z', '2031-03-05') as j`)).j
+check('fitness_bundle: match results and sessions match', same(fit.match_results, await direct(A, 'select * from racket_match_results order by played_at desc limit 500')) && fit.match_results.length > 0 && same(fit.shooting_sessions, await direct(A, 'select * from shooting_sessions order by session_at desc limit 60')) && same(fit.matches, await direct(A, 'select * from racket_matches order by played_at desc limit 10')))
+check('fitness_bundle: every section is an array', ['workouts', 'match_results', 'bookings', 'shooting_sessions', 'matches', 'exercise_goals', 'daily_exercise', 'today_logs'].every(k => Array.isArray(fit[k])))
+
+const dash = (await one(A, `select dashboard_bundle('2031-05-01', '2031-05-04', '2031-05-03T16:00:00Z', '2031-05-04T16:00:00Z', '2031-04-27T16:00:00Z') as j`)).j
+check('dashboard_bundle: every section present', ['overview', 'active_subscriptions', 'running_costs', 'project_costs', 'low_stock', 'day', 'recent_workouts', 'upcoming_bookings', 'exercise_goals', 'exercise_today'].every(k => k in dash), Object.keys(dash).join())
+check('dashboard_bundle: overview and running costs match', Number(dash.overview.income) === 100 && same(dash.running_costs, veh.costs.length ? await direct(A, 'select * from vehicle_running_costs order by name limit 100') : []))
+await as(A, `insert into inventory_items (name,quantity,reorder_level) values ('zz-low',1,5),('zz-ok',9,5),('zz-untracked',0,0)`)
+const low = (await one(A, `select dashboard_bundle('2031-05-01', '2031-05-04', '2031-05-03T16:00:00Z', '2031-05-04T16:00:00Z', '2031-04-27T16:00:00Z') as j`)).j.low_stock.map(i => i.name).filter(n => n.startsWith('zz-'))
+check('dashboard_bundle: low stock is filtered in the database', same(low, ['zz-low']), JSON.stringify(low))
+const dashB = (await one(B, `select dashboard_bundle('2031-05-01', '2031-05-04', '2031-05-03T16:00:00Z', '2031-05-04T16:00:00Z', '2031-04-27T16:00:00Z') as j`)).j
+check('dashboard_bundle: other users get none of it', dashB.low_stock.length === 0 && Number(dashB.overview.income) === 0)
+
+await db.exec('set role anon')
+const denied = []
+for (const call of ['app_session()', 'finance_bundle(current_date)', 'vehicles_bundle()', 'projects_bundle()', 'dashboard_bundle(current_date, current_date, now(), now(), now())', 'nutrition_bundle(current_date, now(), now(), current_date)', 'fitness_bundle(current_date, now(), now(), current_date)']) {
+  try { await db.query(`select ${call}`); denied.push(`${call} ran`) } catch { /* expected */ }
+}
+await db.exec('reset role')
+check('bundles are not executable by anon', denied.length === 0, denied.join('; '))
 
 console.log(`\n${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)

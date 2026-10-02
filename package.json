@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "test:schema": "node supabase/tests/schema.test.mjs",
     "test:validators": "tsx scripts/check-validators.ts",
-    "test": "npm run typecheck && npm run test:schema && npm run test:validators"
+    "test:bundles": "tsx --conditions=react-server scripts/check-bundles.ts",
+    "test": "npm run typecheck && npm run test:schema && npm run test:validators && npm run test:bundles"
   },
   "dependencies": {
     "@number-flow/react": "^0.6.2",

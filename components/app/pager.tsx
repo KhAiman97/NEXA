@@ -31,10 +31,14 @@ function Step({ href, disabled, children }: { href: string; disabled: boolean; c
 /**
  * Previous / next for a list paged on the server. The page number lives in the URL (`?page=2`),
  * so the back button and a reload both land on the same page. Page 1 has no parameter.
+ * `query` carries the list's filters along from page to page.
  */
-export function Pager({ page, pages, total, pageSize, path, noun }: { page: number; pages: number; total: number; pageSize: number; path: string; noun: string }) {
+export function Pager({ page, pages, total, pageSize, path, query = {}, noun }: { page: number; pages: number; total: number; pageSize: number; path: string; query?: Record<string, string>; noun: string }) {
   if (pages <= 1) return null;
-  const href = (n: number) => (n <= 1 ? path : `${path}?page=${n}`);
+  const href = (n: number) => {
+    const search = new URLSearchParams(n <= 1 ? query : { ...query, page: String(n) }).toString();
+    return search ? `${path}?${search}` : path;
+  };
   const first = (page - 1) * pageSize + 1;
   const last = Math.min(page * pageSize, total);
 

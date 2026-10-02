@@ -41,14 +41,8 @@ import {
   updateSubscription,
   updateTransaction,
 } from "@/lib/actions/finance";
-import { selectView } from "@/lib/services/crud";
-import { getOverview } from "@/lib/services/finance/overview";
-import { accounts, categories } from "@/lib/services/finance/reference";
-import { listTransactionsPage } from "@/lib/services/finance/transactions";
-import { subscriptions, summarize } from "@/lib/services/finance/subscriptions";
-import { liabilities, listLiabilityBalances } from "@/lib/services/finance/liabilities";
-import { assets, listWithValues } from "@/lib/services/finance/assets";
-import { goals } from "@/lib/services/finance/goals";
+import { loadFinancePage } from "@/lib/services/finance/page";
+import type { TransactionFilters } from "@/lib/services/finance/transactions";
 import { Amount } from "@/components/app/amount";
 import { CashflowChart } from "@/components/app/charts";
 import { DeleteButton } from "@/components/app/delete-button";
@@ -56,33 +50,49 @@ import { EntryDialog } from "@/components/app/entry-dialog";
 import { LogoLoader } from "@/components/app/logo";
 import { ModuleTabs } from "@/components/app/module-tabs";
 import { Pager } from "@/components/app/pager";
+import { TransactionFilterBar } from "@/components/app/transaction-filters";
 import { RowActions, Empty, Figure, Meter, ModulePage, Panel, Pill, Row, RowList, Section, Table, Td } from "@/components/app/ui";
 
 export const metadata = { title: "Finance" };
 
-type Cashflow = { month: string; income: number; expense: number; net: number };
-
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Ledger filters from the URL. Anything malformed is ignored rather than sent to the database. */
+function readFilters(params: Awaited<SearchParams>): TransactionFilters {
+  const one = (key: string) => (Array.isArray(params[key]) ? params[key][0] : params[key]) ?? "";
+  const type = one("type");
+  return {
+    type: type === "income" || type === "expense" ? type : undefined,
+    categoryId: UUID.test(one("category")) ? one("category") : undefined,
+    accountId: UUID.test(one("account")) ? one("account") : undefined,
+    search: one("q").trim().slice(0, 100) || undefined,
+  };
+}
+
+/** The same filters as URL parameters, so the pager keeps them from page to page. */
+function filterQuery(filters: TransactionFilters): Record<string, string> {
+  const query: Record<string, string> = {};
+  if (filters.type) query.type = filters.type;
+  if (filters.categoryId) query.category = filters.categoryId;
+  if (filters.accountId) query.account = filters.accountId;
+  if (filters.search) query.q = filters.search;
+  return query;
+}
 
 async function FinanceContent({ searchParams }: { searchParams: SearchParams }) {
   const [{ db, today, currency, timezone }, params] = await Promise.all([getSession(), searchParams]);
   const page = Number.parseInt(String(params.page ?? "1"), 10) || 1;
   const rm = (n: number) => money(n, currency);
 
-  const [overview, cashflowRows, ledger, categoryRows, accountRows, subscriptionRows, subscriptionTotals, liabilityRows, balances, assetRows, assetRecords, goalRows] = await Promise.all([
-    getOverview(db, monthOf(today)),
-    selectView<Cashflow>(db, "monthly_cashflow", { orderBy: "month", ascending: false, limit: 6 }),
-    listTransactionsPage(db, page),
-    categories.list(db, { limit: 500 }),
-    accounts.list(db, { limit: 500 }),
-    subscriptions.list(db, { limit: 500 }),
-    summarize(db),
-    liabilities.list(db, { limit: 500 }),
-    listLiabilityBalances(db),
-    listWithValues(db),
-    assets.list(db, { limit: 500 }),
-    goals.list(db, { limit: 500 }),
-  ]);
+  const filters = readFilters(params);
+  const {
+    overview, cashflow: cashflowRows, ledger, categories: categoryRows, accounts: accountRows, subscriptions: subscriptionRows,
+    subscriptionTotals, liabilities: liabilityRows, balances, assetValues: assetRows, assets: assetRecords, goals: goalRows,
+  } = await loadFinancePage(db, monthOf(today), page, filters);
+  const filtered = Object.values(filters).some(Boolean);
+  const query = filterQuery(filters);
 
   const categoryName = new Map(categoryRows.map((c) => [c.id, c.name]));
   const accountName = new Map(accountRows.map((a) => [a.id, a.name]));
@@ -142,11 +152,22 @@ async function FinanceContent({ searchParams }: { searchParams: SearchParams }) 
       <Section
         id="transactions"
         title="Transactions"
-        hint={ledger.total > ledger.pageSize ? `${num(ledger.total)} entries across all accounts, newest first.` : "Every entry across all accounts, newest first."}
+        hint={
+          filtered
+            ? `${num(ledger.total)} matching: ${rm(ledger.income)} in, ${rm(ledger.expense)} out.`
+            : ledger.total > ledger.pageSize
+              ? `${num(ledger.total)} entries across all accounts, newest first.`
+              : "Every entry across all accounts, newest first."
+        }
         aside={<EntryDialog label="Add transaction" fields={transactionFields(categoryOptions, accountOptions)} action={createTransaction} />}
       >
+        <TransactionFilterBar filters={query} categories={categoryOptions} accounts={accountOptions} />
         {ledger.total === 0 ? (
-          <Empty title="No transactions yet">Add your first income or expense to start the ledger.</Empty>
+          filtered ? (
+            <Empty title="Nothing matches">No transaction fits these filters. Clear them to see the whole ledger.</Empty>
+          ) : (
+            <Empty title="No transactions yet">Add your first income or expense to start the ledger.</Empty>
+          )
         ) : (
           <>
           <RowList>
@@ -163,7 +184,7 @@ async function FinanceContent({ searchParams }: { searchParams: SearchParams }) 
               />
             ))}
           </RowList>
-          <Pager page={ledger.page} pages={ledger.pages} total={ledger.total} pageSize={ledger.pageSize} path="/finance" noun="Transactions" />
+          <Pager page={ledger.page} pages={ledger.pages} total={ledger.total} pageSize={ledger.pageSize} path="/finance" query={query} noun="Transactions" />
           </>
         )}
       </Section>

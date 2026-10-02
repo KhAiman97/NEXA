@@ -2,15 +2,9 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { getSession } from "@/lib/app/session";
+import { loadDashboard } from "@/lib/services/dashboard";
 import { MODULES, moduleStyle, type ModuleKey } from "@/lib/app/modules";
-import { addDays, dateTime, longDay, money, monthName, num } from "@/lib/format";
-import { monthOf, zonedDayRange } from "@/lib/utils/time";
-import { getOverview } from "@/lib/services/finance/overview";
-import { summarize } from "@/lib/services/finance/subscriptions";
-import { listRunningCosts } from "@/lib/services/vehicles";
-import { listLowStock, listProjectCosts } from "@/lib/services/projects";
-import { getDaySummary } from "@/lib/services/nutrition";
-import { courtBookings, exerciseGoals, listDailyExercise, workouts } from "@/lib/services/fitness";
+import { dateTime, longDay, money, monthName, num } from "@/lib/format";
 import { Amount } from "@/components/app/amount";
 import { LogoLoader } from "@/components/app/logo";
 import { SpotlightCard } from "@/components/app/spotlight-card";
@@ -47,21 +41,10 @@ function ModuleCard({ module, facts }: { module: ModuleKey; facts: { label: stri
 async function OverviewContent() {
   const session = await getSession();
   const { db, today, currency, timezone } = session;
-  const weekStart = zonedDayRange(addDays(today, -6), timezone).from;
-  const now = zonedDayRange(today, timezone).from;
-
-  const [overview, subscriptions, runningCosts, projectCosts, lowStock, dayRows, recentWorkouts, upcoming, goalRows, goalTotals] = await Promise.all([
-    getOverview(db, monthOf(today)),
-    summarize(db),
-    listRunningCosts(db),
-    listProjectCosts(db),
-    listLowStock(db),
-    session.hasProfile ? getDaySummary(db, session.userId, today) : null,
-    workouts.list(db, { range: { column: "performed_at", from: weekStart }, limit: 100 }),
-    courtBookings.list(db, { filter: { status: "booked" }, range: { column: "starts_at", from: now }, limit: 20 }),
-    exerciseGoals.list(db, { filter: { is_active: true }, limit: 100 }),
-    listDailyExercise(db, today, today),
-  ]);
+  const data = await loadDashboard(db, today, timezone);
+  const { overview, subscriptions, runningCosts, projectCosts, lowStock, recentWorkouts, upcoming, goals: goalRows, goalTotals } = data;
+  // Food and drink are grouped by local day, which needs a profile with a timezone.
+  const dayRows = session.hasProfile ? data.day : null;
 
   const rm = (n: number) => money(n, currency);
   const vehicle = [...runningCosts].sort((a, b) => Number(b.distance_km) - Number(a.distance_km))[0];

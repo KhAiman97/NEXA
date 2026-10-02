@@ -3,7 +3,7 @@ import { getSession } from "@/lib/app/session";
 import { componentFields, inventoryFields, projectFields, toOptions } from "@/lib/app/forms";
 import { label, money, num } from "@/lib/format";
 import { createInventoryItem, createProject, deleteInventoryItem, deleteProject, saveProjectComponent, updateInventoryItem, updateProject } from "@/lib/actions/projects";
-import { inventory, listProjectCosts, projects } from "@/lib/services/projects";
+import { loadProjectsPage } from "@/lib/services/projects";
 import type { InventoryItem, Project } from "@/lib/validators/projects";
 import { DeleteButton } from "@/components/app/delete-button";
 import { EntryDialog } from "@/components/app/entry-dialog";
@@ -35,7 +35,7 @@ async function ProjectsContent() {
   const { db, currency } = await getSession();
   const rm = (n: number) => money(n, currency);
 
-  const [projectRows, costs, items] = await Promise.all([projects.list(db, { limit: 200 }), listProjectCosts(db), inventory.list(db, { limit: 500 })]);
+  const { projects: projectRows, costs, inventory: items } = await loadProjectsPage(db);
 
   const costOf = new Map(costs.map((c) => [c.project_id, c]));
   const sortedProjects = [...projectRows].sort((a, b) => STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status));

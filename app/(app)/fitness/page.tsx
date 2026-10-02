@@ -11,8 +11,7 @@ import {
   updateExerciseGoal,
 } from "@/lib/actions/fitness";
 import { createCourtBooking, createRacketMatch, createShootingSession, createWorkout, deleteCourtBooking, deleteRacketMatch, deleteShootingSession, deleteWorkout, updateCourtBooking, updateRacketMatch, updateShootingSession, updateWorkout } from "@/lib/actions/fitness";
-import { exerciseGoals, exerciseLogs, listDailyExercise } from "@/lib/services/fitness";
-import { courtBookings, getRacketStats, getShootingTrend, listMatchResults, racketMatches, shootingSessions, workouts } from "@/lib/services/fitness";
+import { loadFitnessPage } from "@/lib/services/fitness";
 import type { CourtBooking } from "@/lib/validators/fitness";
 import { TrendChart } from "@/components/app/charts";
 import { DeleteButton } from "@/components/app/delete-button";
@@ -39,18 +38,9 @@ async function FitnessContent() {
   const weekStart = addDays(today, -(WEEK - 1));
   const todayRange = zonedDayRange(today, timezone);
 
-  const [workoutRows, stats, results, bookings, sessions, shootingTrend, matchRecords, goalRows, dailyRows, todayLogs] = await Promise.all([
-    workouts.list(db, { limit: 15 }),
-    getRacketStats(db),
-    listMatchResults(db, undefined, 10),
-    courtBookings.list(db, { limit: 10 }),
-    shootingSessions.list(db, { limit: 10 }),
-    getShootingTrend(db),
-    racketMatches.list(db, { limit: 10 }),
-    exerciseGoals.list(db, { limit: 100 }),
-    listDailyExercise(db, addDays(today, -60), today),
-    exerciseLogs.list(db, { range: { column: "logged_at", from: todayRange.from, to: todayRange.to }, limit: 200 }),
-  ]);
+  const {
+    workouts: workoutRows, stats, results, bookings, sessions, shootingTrend, matches: matchRecords, goals: goalRows, daily: dailyRows, todayLogs,
+  } = await loadFitnessPage(db, today, todayRange, addDays(today, -60));
 
   const matchRecord = new Map(matchRecords.map((m) => [m.id, m]));
 

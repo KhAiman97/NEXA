@@ -3,7 +3,7 @@ import { getSession } from "@/lib/app/session";
 import { fuelFields, maintenanceFields, parkingFields, toOptions, vehicleFields } from "@/lib/app/forms";
 import { date, dateTime, day, dayWithYear, label, money, num } from "@/lib/format";
 import { createFuelLog, createMaintenanceLog, createParkingLog, createVehicle, deleteFuelLog, deleteMaintenanceLog, deleteParkingLog, deleteVehicle, updateFuelLog, updateMaintenanceLog, updateParkingLog, updateVehicle } from "@/lib/actions/vehicles";
-import { fuelLogs, listFuelSegments, listMaintenanceDue, listRunningCosts, maintenanceLogs, parkingLogs, vehicles } from "@/lib/services/vehicles";
+import { loadVehiclesPage } from "@/lib/services/vehicles";
 import { TrendChart } from "@/components/app/charts";
 import { DeleteButton } from "@/components/app/delete-button";
 import { EntryDialog } from "@/components/app/entry-dialog";
@@ -22,13 +22,7 @@ async function VehiclesContent() {
   const { db, today, currency, timezone } = await getSession();
   const rm = (n: number) => money(n, currency);
 
-  const [vehicleRows, costs, fuel, maintenance, parking] = await Promise.all([
-    vehicles.list(db, { limit: 100 }),
-    listRunningCosts(db),
-    fuelLogs.list(db, { limit: 15 }),
-    maintenanceLogs.list(db, { limit: 15 }),
-    parkingLogs.list(db, { limit: 15 }),
-  ]);
+  const { vehicles: vehicleRows, costs, fuel, maintenance, parking, details: detailOf } = await loadVehiclesPage(db, today);
 
   if (vehicleRows.length === 0) {
     return (
@@ -39,10 +33,6 @@ async function VehiclesContent() {
     );
   }
 
-  const details = await Promise.all(
-    vehicleRows.map(async (v) => ({ id: v.id, segments: await listFuelSegments(db, v.id, 12), due: await listMaintenanceDue(db, v.id, today) })),
-  );
-  const detailOf = new Map(details.map((d) => [d.id, d]));
   const costOf = new Map(costs.map((c) => [c.vehicle_id, c]));
   const nameOf = new Map(vehicleRows.map((v) => [v.id, v.name]));
   const vehicleOptions = toOptions(vehicleRows);

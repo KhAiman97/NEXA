@@ -24,27 +24,63 @@ export function listTransactions(db: Db, query: z.infer<typeof transactionQuery>
 
 export const TRANSACTIONS_PAGE_SIZE = 10;
 
-export type TransactionsPage = { rows: Transaction[]; total: number; page: number; pages: number; pageSize: number };
+/** Ledger filters. They are applied inside the transactions_page RPC, not after the rows come back. */
+export type TransactionFilters = { type?: "income" | "expense"; categoryId?: string; accountId?: string; search?: string };
+
+/** What the transactions_page RPC returns: one page of rows plus totals for everything that matched. */
+export type LedgerResult = { total: number; income: number; expense: number; rows: Transaction[] };
+
+export type TransactionsPage = {
+  rows: Transaction[];
+  /** Rows matching the filters, across all pages. */
+  total: number;
+  /** Income and spending summed over everything that matched, not just this page. */
+  income: number;
+  expense: number;
+  page: number;
+  pages: number;
+  pageSize: number;
+};
+
+export function toFilterArgs(filters: TransactionFilters) {
+  return {
+    p_type: filters.type ?? null,
+    p_category_id: filters.categoryId ?? null,
+    p_account_id: filters.accountId ?? null,
+    p_search: filters.search?.trim() || null,
+  };
+}
+
+export function toTransactionsPage(result: LedgerResult, page: number, pageSize: number): TransactionsPage {
+  const total = Number(result.total);
+  return {
+    rows: result.rows,
+    total,
+    income: Number(result.income),
+    expense: Number(result.expense),
+    page,
+    pages: Math.max(1, Math.ceil(total / pageSize)),
+    pageSize,
+  };
+}
 
 /**
- * One page of the ledger, newest first, plus the total for the pager: a single round trip
+ * One page of the ledger, newest first, plus the totals for the pager: a single round trip
  * (the transactions_page RPC). A page past the end, e.g. after deleting the last row on the
  * last page, falls back to the last page that exists.
  */
-export async function listTransactionsPage(db: Db, page: number, pageSize = TRANSACTIONS_PAGE_SIZE): Promise<TransactionsPage> {
+export async function listTransactionsPage(db: Db, page: number, filters: TransactionFilters = {}, pageSize = TRANSACTIONS_PAGE_SIZE): Promise<TransactionsPage> {
   const fetchPage = async (n: number) => {
-    const { data, error } = await db.rpc("transactions_page", { p_limit: pageSize, p_offset: (n - 1) * pageSize });
+    const { data, error } = await db.rpc("transactions_page", { p_limit: pageSize, p_offset: (n - 1) * pageSize, ...toFilterArgs(filters) });
     if (error) throw fromPostgrest(error);
-    const result = data as { total: number; rows: Transaction[] };
-    return { rows: result.rows, total: Number(result.total) };
+    return data as LedgerResult;
   };
 
   const wanted = Math.max(1, Math.floor(page) || 1);
-  let { rows, total } = await fetchPage(wanted);
-  const pages = Math.max(1, Math.ceil(total / pageSize));
-  const current = Math.min(wanted, pages);
-  if (current !== wanted) ({ rows, total } = await fetchPage(current));
-  return { rows, total, page: current, pages, pageSize };
+  let result = await fetchPage(wanted);
+  const current = Math.min(wanted, Math.max(1, Math.ceil(Number(result.total) / pageSize)));
+  if (current !== wanted) result = await fetchPage(current);
+  return toTransactionsPage(result, current, pageSize);
 }
 
 type ExpenseSpec = {

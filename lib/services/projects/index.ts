@@ -2,6 +2,7 @@ import "server-only";
 import type { z } from "zod";
 import { createCrud, selectView, type Db } from "../crud";
 import { fromPostgrest } from "../errors";
+import { callBundle } from "../bundle";
 import {
   componentInput,
   inventoryItemInput,
@@ -34,6 +35,13 @@ export type ProjectCostSummary = {
 /** Spend per project from expenses tagged with project_id, plus the value of allocated parts. */
 export function listProjectCosts(db: Db) {
   return selectView<ProjectCostSummary>(db, "project_cost_summary", { orderBy: "name" });
+}
+
+export type ProjectsPage = { projects: Project[]; costs: ProjectCostSummary[]; inventory: InventoryItem[] };
+
+/** Everything the Projects page shows, in one round trip (the projects_bundle RPC). */
+export function loadProjectsPage(db: Db): Promise<ProjectsPage> {
+  return callBundle<ProjectsPage>(db, "projects_bundle");
 }
 
 /** Items at or below their reorder level (and not sold/broken). */

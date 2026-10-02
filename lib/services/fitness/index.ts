@@ -2,6 +2,7 @@ import "server-only";
 import type { z } from "zod";
 import { createCrud, selectView, type Db } from "../crud";
 import { fromPostgrest } from "../errors";
+import { callBundle } from "../bundle";
 import { withLinkedExpense } from "../finance/transactions";
 import {
   courtBookingInput,
@@ -97,7 +98,12 @@ export function listMatchResults(db: Db, sport?: RacketMatchResult["sport"], lim
 export type RacketStats = { played: number; wins: number; losses: number; draws: number; winRatePct: number; pointsFor: number; pointsAgainst: number };
 
 export async function getRacketStats(db: Db, sport?: RacketMatchResult["sport"]): Promise<RacketStats> {
-  const results = (await listMatchResults(db, sport, 500)).filter((r) => r.result !== null);
+  return racketStatsOf(await listMatchResults(db, sport, 500));
+}
+
+/** Win/loss record from results already in hand. Matches without a result are not counted. */
+export function racketStatsOf(all: RacketMatchResult[]): RacketStats {
+  const results = all.filter((r) => r.result !== null);
   const wins = results.filter((r) => r.result === "win").length;
   const losses = results.filter((r) => r.result === "loss").length;
   const played = results.length;
@@ -154,7 +160,11 @@ export type ShootingTrendPoint = { session_at: string; discipline: ShootingSessi
 
 /** Accuracy and score % per session, oldest first, for charting. */
 export async function getShootingTrend(db: Db, discipline?: ShootingSession["discipline"], limit = 60): Promise<ShootingTrendPoint[]> {
-  const sessions = await shootingSessions.list(db, { filter: { discipline }, limit });
+  return shootingTrendOf(await shootingSessions.list(db, { filter: { discipline }, limit }));
+}
+
+/** The same trend from sessions already in hand (newest first in, oldest first out). */
+export function shootingTrendOf(sessions: ShootingSession[]): ShootingTrendPoint[] {
   return sessions
     .map((s) => ({
       session_at: s.session_at,
@@ -176,4 +186,51 @@ export async function listDailyExercise(db: Db, fromDay: string, toDay: string):
   const { data, error } = await db.from("daily_exercise").select("*").gte("day", fromDay).lte("day", toDay);
   if (error) throw fromPostgrest(error);
   return (data ?? []) as DailyExercise[];
+}
+
+// --------------------------------------------------------------------- page
+export type FitnessPage = {
+  workouts: Workout[];
+  stats: RacketStats;
+  /** Latest 10 results. */
+  results: RacketMatchResult[];
+  bookings: CourtBooking[];
+  /** Latest 10 sessions. */
+  sessions: ShootingSession[];
+  shootingTrend: ShootingTrendPoint[];
+  matches: RacketMatch[];
+  goals: ExerciseGoal[];
+  daily: DailyExercise[];
+  todayLogs: ExerciseLog[];
+};
+
+type FitnessBundle = {
+  workouts: Workout[];
+  match_results: RacketMatchResult[];
+  bookings: CourtBooking[];
+  shooting_sessions: ShootingSession[];
+  matches: RacketMatch[];
+  exercise_goals: ExerciseGoal[];
+  daily_exercise: DailyExercise[];
+  today_logs: ExerciseLog[];
+};
+
+/**
+ * Everything the Fitness page shows, in one round trip (the fitness_bundle RPC). The record and the
+ * score trend are worked out from the same match results and sessions the lists show.
+ */
+export async function loadFitnessPage(db: Db, today: string, dayRange: { from: string; to: string }, dailyFrom: string): Promise<FitnessPage> {
+  const bundle = await callBundle<FitnessBundle>(db, "fitness_bundle", { p_today: today, p_from: dayRange.from, p_to: dayRange.to, p_daily_from: dailyFrom });
+  return {
+    workouts: bundle.workouts,
+    stats: racketStatsOf(bundle.match_results),
+    results: bundle.match_results.slice(0, 10),
+    bookings: bundle.bookings,
+    sessions: bundle.shooting_sessions.slice(0, 10),
+    shootingTrend: shootingTrendOf(bundle.shooting_sessions),
+    matches: bundle.matches,
+    goals: bundle.exercise_goals,
+    daily: bundle.daily_exercise,
+    todayLogs: bundle.today_logs,
+  };
 }

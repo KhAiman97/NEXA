@@ -23,7 +23,7 @@ or paste the files into the SQL editor in order. Then:
 
 ```bash
 npm run dev          # http://localhost:3000
-npm test             # typecheck + schema tests + validator checks
+npm test             # typecheck + schema tests + validator checks + page loaders against the SQL functions
 ```
 
 ## Deploy
@@ -47,7 +47,7 @@ Set `NEXT_PUBLIC_SITE_URL` to your deployed URL so metadata/OG links are correct
 
 ```
 supabase/
-  migrations/          10 ordered SQL files (schema, RLS, views, triggers, grants, exercise goals, indexes + read RPCs)
+  migrations/          11 ordered SQL files (schema, RLS, views, triggers, grants, exercise goals, indexes, page RPCs)
   tests/schema.test.mjs  in-memory Postgres test: RLS, FKs, views, generated columns
 app/
   (app)/               signed-in shell (sidebar + bottom tabs) and one page per module:
@@ -73,6 +73,8 @@ public/sw.js           service worker
 public/icons, public/brand   PWA icons and logo images (cut from logo.png)
 proxy.ts               session refresh + auth guard (PWA paths exempt)
 ```
+
+**One round trip per page:** each page reads through one Postgres function (`dashboard_bundle`, `finance_bundle`, `vehicles_bundle`, `projects_bundle`, `nutrition_bundle`, `fitness_bundle`) that returns everything it shows, and the session comes from `app_session`. Ledger filters and search run inside `transactions_page`. All are `security invoker`, so RLS still applies.
 
 **Request flow:** UI → server action (`lib/actions`) → `run()` verifies the user with `auth.getUser()` and builds a session-bound client → Zod `parse()` → service (`lib/services`) → Supabase. Reads in Server Components call services directly; mutations go through actions.
 

@@ -2,6 +2,7 @@ import "server-only";
 import type { z } from "zod";
 import { createCrud, selectView, type Db } from "../crud";
 import { fromPostgrest } from "../errors";
+import { callBundle } from "../bundle";
 import { withLinkedExpense } from "../finance/transactions";
 import {
   fuelLogInput,
@@ -78,9 +79,16 @@ export function listFuelSegments(db: Db, vehicleId: string, limit = 24) {
 export type VehicleReminders = { overdueByDate: MaintenanceLog[]; dueByOdometer: MaintenanceLog[] };
 
 /**
- * Maintenance reminders. Only the latest log of each kind counts, so an old oil change with a
- * lapsed due date is not flagged once a newer oil change has been logged.
+ * Maintenance reminders from the latest log of each kind, so an old oil change with a lapsed
+ * due date is not flagged once a newer oil change has been logged.
  */
+export function remindersFrom(latestOfEachKind: MaintenanceLog[], odometer: number | undefined, today: string): VehicleReminders {
+  return {
+    overdueByDate: latestOfEachKind.filter((l) => l.next_due_on != null && l.next_due_on <= today),
+    dueByOdometer: latestOfEachKind.filter((l) => odometer !== undefined && l.next_due_km != null && l.next_due_km <= odometer),
+  };
+}
+
 export async function listMaintenanceDue(db: Db, vehicleId: string, today: string): Promise<VehicleReminders> {
   const [logsResult, costs] = await Promise.all([
     db
@@ -97,11 +105,36 @@ export async function listMaintenanceDue(db: Db, vehicleId: string, today: strin
   for (const log of (logsResult.data ?? []) as MaintenanceLog[]) {
     if (!latestByKind.has(log.kind)) latestByKind.set(log.kind, log);
   }
+  return remindersFrom([...latestByKind.values()], costs[0]?.current_odometer_km, today);
+}
 
-  const odometer = costs[0]?.current_odometer_km;
-  const latest = [...latestByKind.values()];
-  return {
-    overdueByDate: latest.filter((l) => l.next_due_on != null && l.next_due_on <= today),
-    dueByOdometer: latest.filter((l) => odometer !== undefined && l.next_due_km != null && l.next_due_km <= odometer),
-  };
+export type VehiclesPage = {
+  vehicles: Vehicle[];
+  costs: VehicleRunningCost[];
+  fuel: FuelLog[];
+  maintenance: MaintenanceLog[];
+  parking: ParkingLog[];
+  /** Per vehicle: its latest 12 fuel segments (newest first) and what is due. */
+  details: Map<string, { segments: FuelSegment[]; due: VehicleReminders }>;
+};
+
+type VehiclesBundle = Omit<VehiclesPage, "details"> & { segments: FuelSegment[]; latest_services: MaintenanceLog[] };
+
+/**
+ * Everything the Vehicles page shows, in one round trip (the vehicles_bundle RPC). This also covers
+ * what used to be three follow-up requests per vehicle for fuel segments and reminders.
+ */
+export async function loadVehiclesPage(db: Db, today: string): Promise<VehiclesPage> {
+  const { segments, latest_services, ...lists } = await callBundle<VehiclesBundle>(db, "vehicles_bundle");
+  const odometerOf = new Map(lists.costs.map((c) => [c.vehicle_id, c.current_odometer_km]));
+  const details = new Map(
+    lists.vehicles.map((v) => [
+      v.id,
+      {
+        segments: segments.filter((s) => s.vehicle_id === v.id),
+        due: remindersFrom(latest_services.filter((m) => m.vehicle_id === v.id), odometerOf.get(v.id), today),
+      },
+    ]),
+  );
+  return { ...lists, details };
 }
