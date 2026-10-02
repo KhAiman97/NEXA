@@ -22,8 +22,8 @@ type FinanceBundle = {
   asset_values: AssetWithValue[];
   assets: Asset[];
   goals: Goal[];
-  paid_subscriptions: { id: string; paid_on: string }[];
-  paid_liabilities: { id: string; paid_on: string }[];
+  paid_subscriptions?: { id: string; paid_on: string }[];
+  paid_liabilities?: { id: string; paid_on: string }[];
 };
 
 export type FinancePage = {
@@ -71,7 +71,8 @@ export async function loadFinancePage(db: Db, month: string, page: number, filte
     assetValues: bundle.asset_values,
     assets: bundle.assets,
     goals: bundle.goals,
-    paidSubscriptions: new Map(bundle.paid_subscriptions.map((p) => [p.id, p.paid_on])),
-    paidLiabilities: new Map(bundle.paid_liabilities.map((p) => [p.id, p.paid_on])),
+    // `?? []`: if the database function is a version behind the app, the page still loads, just without ticks.
+    paidSubscriptions: new Map((bundle.paid_subscriptions ?? []).map((p) => [p.id, p.paid_on])),
+    paidLiabilities: new Map((bundle.paid_liabilities ?? []).map((p) => [p.id, p.paid_on])),
   };
 }

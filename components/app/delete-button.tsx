@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { ActionResult } from "@/lib/actions/run";
@@ -10,6 +11,7 @@ export function DeleteButton({ id, what, action }: { id: string; what: string; a
   const [armed, setArmed] = useState(false);
   const [failed, setFailed] = useState(false);
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
 
   useEffect(() => {
     if (!armed) return;
@@ -31,6 +33,8 @@ export function DeleteButton({ id, what, action }: { id: string; what: string; a
         toast.error(`Could not delete ${what}`, { description: result.error.message });
       } else {
         toast.success(`Deleted ${what}`);
+        // The action already redraws the page; asking again makes sure the screen never shows the old list.
+        router.refresh();
       }
     });
   };

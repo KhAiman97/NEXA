@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import type { ActionResult } from "@/lib/actions/run";
 import { cn } from "@/lib/utils";
@@ -21,13 +22,17 @@ export function QuickLogButton({
 }) {
   const [failed, setFailed] = useState(false);
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
 
   const log = () =>
     startTransition(async () => {
       const result = await action({ goal_id: goalId, amount });
       setFailed(Boolean(result.error));
       if (result.error) toast.error("Not saved", { description: result.error.message });
-      else toast.success(`Logged ${amount}`);
+      else {
+        toast.success(`Logged ${amount}`);
+        router.refresh();
+      }
     });
 
   return (

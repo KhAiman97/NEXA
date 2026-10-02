@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { BookOpen, Check, Search } from "lucide-react";
 import type { ActionResult } from "@/lib/actions/run";
@@ -41,6 +42,7 @@ export function FoodCatalogueDialog({
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+  const router = useRouter();
   const saved = useMemo(() => new Set(savedNames.map((n) => n.toLowerCase())), [savedNames]);
 
   const groups = useMemo(() => {
@@ -66,7 +68,10 @@ export function FoodCatalogueDialog({
       const result = await action(mode === "log" ? { key: item.key, meal_type: meal } : { key: item.key });
       setBusy(null);
       if (result.error) setError(`${item.name}: ${result.error.message}`);
-      else setDone((d) => ({ ...d, [item.key]: (d[item.key] ?? 0) + 1 }));
+      else {
+        setDone((d) => ({ ...d, [item.key]: (d[item.key] ?? 0) + 1 }));
+        router.refresh();
+      }
     });
   };
 

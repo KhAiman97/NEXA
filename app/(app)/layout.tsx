@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { Account, AccountSkeleton } from "@/components/app/account";
 import { Brand } from "@/components/app/brand";
 import { BottomNav, SideNav } from "@/components/app/nav";
+import { PullToRefresh } from "@/components/app/pull-to-refresh";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -29,6 +30,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </main>
 
       <BottomNav />
+      <PullToRefresh />
     </div>
   );
 }

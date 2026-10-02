@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { CircleCheck } from "lucide-react";
 import { toast } from "sonner";
 import type { ActionResult } from "@/lib/actions/run";
@@ -12,12 +13,16 @@ import { cn } from "@/lib/utils";
  */
 export function PayButton({ id, what, action, className }: { id: string; what: string; action: (id: unknown) => Promise<ActionResult<unknown>>; className?: string }) {
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
 
   const pay = () =>
     startTransition(async () => {
       const result = await action(id);
       if (result.error) toast.error(`Could not record ${what}`, { description: result.error.message });
-      else toast.success("Payment recorded", { description: `${what} is marked as paid for this month.` });
+      else {
+        toast.success("Payment recorded", { description: `${what} is marked as paid for this month.` });
+        router.refresh();
+      }
     });
 
   return (

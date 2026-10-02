@@ -1,5 +1,5 @@
 import "server-only";
-import { revalidatePath } from "next/cache";
+import { refresh, revalidatePath } from "next/cache";
 import { ZodError, type ZodType } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import type { Db } from "@/lib/services/crud";
@@ -23,7 +23,7 @@ export function parse<T>(schema: ZodType<T>, input: unknown): T {
 
 /**
  * Wraps one action: authenticates with getUser() (verified against Supabase, not just the cookie),
- * runs `fn` with a session-bound client, revalidates paths, and converts failures into safe errors.
+ * runs `fn` with a session-bound client, refreshes what the browser shows, and converts failures into safe errors.
  */
 export async function run<T>(fn: (ctx: Ctx) => Promise<T>, revalidate: string[] = []): Promise<ActionResult<T>> {
   try {
@@ -33,6 +33,11 @@ export async function run<T>(fn: (ctx: Ctx) => Promise<T>, revalidate: string[] 
 
     const result = await fn({ db, userId: data.user.id });
     for (const path of revalidate) revalidatePath(path);
+    // Every page shows per-user data that one change can touch (a fuel fill is also an expense, a payment
+    // moves net worth), so drop everything the browser is holding and redraw the page being looked at
+    // in this same response. Nothing here is cached on the server, so this costs no extra work.
+    revalidatePath("/", "layout");
+    refresh();
     return { data: result };
   } catch (err) {
     if (err instanceof ServiceError) return { error: { code: err.code, message: err.message } };

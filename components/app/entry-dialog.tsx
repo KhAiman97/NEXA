@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Pencil, Plus } from "lucide-react";
 import type { ActionResult } from "@/lib/actions/run";
 import type { Field } from "@/lib/app/forms";
@@ -146,6 +147,7 @@ export function EntryDialog({
   const [openedAt, setOpenedAt] = useState({ date: "", dateTime: "" });
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
 
   const onOpenChange = (next: boolean) => {
     if (next) {
@@ -166,6 +168,8 @@ export function EntryDialog({
       }
       setOpen(false);
       toast.success(edit ? "Changes saved" : "Saved", { description: label });
+      // The action already redraws the page; asking again makes sure the screen never shows the old values.
+      router.refresh();
     });
   };
 
