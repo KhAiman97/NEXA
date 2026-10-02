@@ -22,7 +22,7 @@ export function listTransactions(db: Db, query: z.infer<typeof transactionQuery>
   return transactions.list(db, { filter, range: { column: "occurred_at", from, to }, limit, offset });
 }
 
-export const TRANSACTIONS_PAGE_SIZE = 20;
+export const TRANSACTIONS_PAGE_SIZE = 10;
 
 export type TransactionsPage = { rows: Transaction[]; total: number; page: number; pages: number; pageSize: number };
 
