@@ -44,6 +44,26 @@ export function summarizeRows(active: Subscription[]): SubscriptionSummary {
   };
 }
 
+/**
+ * "I have paid this": record a charge for the subscription now. The bill date is left alone. The daily
+ * job moves it on, and because this month already has a charge it does not record another.
+ */
+export async function payNow(db: Db, id: string) {
+  const sub = await subscriptions.get(db, id);
+  if (!sub.is_active) throw new ServiceError("constraint_violation", "This subscription is cancelled.");
+  if (!(Number(sub.amount) > 0)) throw new ServiceError("constraint_violation", "This subscription has no amount to record.");
+  return transactions.create(db, {
+    type: "expense",
+    amount: Number(sub.amount),
+    occurred_at: new Date().toISOString(),
+    title: sub.name,
+    note: "Marked as paid",
+    account_id: sub.account_id ?? null,
+    category_id: sub.category_id ?? null,
+    subscription_id: sub.id,
+  });
+}
+
 function advance(isoDate: string, cycle: Subscription["billing_cycle"]): string {
   const d = new Date(`${isoDate}T00:00:00Z`);
   if (cycle === "weekly") d.setUTCDate(d.getUTCDate() + 7);

@@ -123,7 +123,7 @@ async function VehiclesContent() {
   );
 
   const fuelTab = (
-    <Section id="fuel" title="Fuel" hint="The latest 15 fill-ups." aside={<EntryDialog label="Add fill-up" fields={fuelFields(vehicleOptions)} action={createFuelLog} />}>
+    <Section id="fuel" title="Fuel" hint="Fill-ups, newest first." aside={<EntryDialog label="Add fill-up" fields={fuelFields(vehicleOptions)} action={createFuelLog} />}>
       {fuel.length === 0 ? (
         <Empty title="No fill-ups yet">Log each visit to the pump to see what a kilometre costs.</Empty>
       ) : (
@@ -180,7 +180,7 @@ async function VehiclesContent() {
   );
 
   const parkingTab = (
-    <Section id="parking" title="Parking" hint="The latest 15 sessions." aside={<EntryDialog label="Add parking" fields={parkingFields(vehicleOptions)} action={createParkingLog} />}>
+    <Section id="parking" title="Parking" hint="Sessions, newest first." aside={<EntryDialog label="Add parking" fields={parkingFields(vehicleOptions)} action={createParkingLog} />}>
       {parking.length === 0 ? (
         <Empty title="No parking logged yet" />
       ) : (

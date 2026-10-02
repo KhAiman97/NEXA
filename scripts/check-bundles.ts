@@ -72,7 +72,10 @@ async function main() {
         select case when n % 4 = 0 then 'income' else 'expense' end, n, 'tx ' || n, timestamptz '2031-05-01T10:00:00+08' + n * interval '1 hour',
                '11111111-1111-1111-1111-111111111111', case when n % 2 = 0 then '22222222-2222-2222-2222-222222222222'::uuid end
         from generate_series(1, 25) n;
-      insert into subscriptions (name, amount, billing_cycle, is_active) values ('Netflix', 55, 'monthly', true), ('Old gym', 99, 'monthly', false);
+      insert into subscriptions (id, name, amount, billing_cycle, is_active) values ('55555555-5555-5555-5555-555555555555', 'Netflix', 55, 'monthly', true), ('55555555-5555-5555-5555-555555555556', 'Old gym', 99, 'monthly', false);
+      insert into transactions (type, amount, title, occurred_at, subscription_id) values ('expense', 55, 'Netflix', '2031-05-01T09:00:00+08', '55555555-5555-5555-5555-555555555555');
+      insert into liabilities (id, name, principal, monthly_payment, due_day) values ('77777777-7777-7777-7777-777777777777', 'Car loan', 1000, 300, 15), ('77777777-7777-7777-7777-777777777778', 'Card', 500, 100, 20);
+      insert into liability_payments (liability_id, paid_on, amount) values ('77777777-7777-7777-7777-777777777777', '2031-05-02', 300), ('77777777-7777-7777-7777-777777777778', '2031-04-20', 100);
       insert into monthly_goals (month, income_target, expense_limit) values ('2031-05-01', 500, 300);
       insert into vehicles (id, name, initial_odometer_km) values ('33333333-3333-3333-3333-333333333333', 'Bezza', 1000);
       insert into fuel_logs (vehicle_id, filled_at, odometer_km, liters, price_per_liter, total_cost, is_full_tank) values
@@ -111,8 +114,14 @@ async function main() {
   calls.length = 0;
   const finance = await loadFinancePage(db, "2031-05-01", 1);
   check("finance: one round trip", oneCall("finance_bundle"), calls);
-  check("finance: ledger paged 10 at a time, newest first", finance.ledger.rows.length === 10 && finance.ledger.total === 25 && finance.ledger.pages === 3 && finance.ledger.rows[0].title === "tx 25", finance.ledger);
-  check("finance: overview totals and targets", finance.overview.income === 84 && finance.overview.expense === 241 && finance.overview.incomeTarget === 500 && finance.overview.net === -157, finance.overview);
+  check("finance: ledger paged 10 at a time, newest first", finance.ledger.rows.length === 10 && finance.ledger.total === 26 && finance.ledger.pages === 3 && finance.ledger.rows[0].title === "tx 25", finance.ledger);
+  check("finance: overview totals and targets", finance.overview.income === 84 && finance.overview.expense === 296 && finance.overview.incomeTarget === 500 && finance.overview.net === -212, finance.overview);
+  check(
+    "finance: what is already paid this month",
+    finance.paidSubscriptions.get("55555555-5555-5555-5555-555555555555") === "2031-05-01" && finance.paidSubscriptions.size === 1 &&
+      finance.paidLiabilities.get("77777777-7777-7777-7777-777777777777") === "2031-05-02" && !finance.paidLiabilities.has("77777777-7777-7777-7777-777777777778"),
+    [[...finance.paidSubscriptions], [...finance.paidLiabilities]],
+  );
   check("finance: lists and subscription totals", finance.accounts.length === 1 && finance.categories.length === 1 && finance.subscriptions.length === 2 && finance.subscriptionTotals.monthlyTotal === 55 && finance.cashflow.length === 1, finance.subscriptionTotals);
 
   const filtered = await loadFinancePage(db, "2031-05-01", 1, { type: "income", categoryId: "22222222-2222-2222-2222-222222222222" });
@@ -121,14 +130,14 @@ async function main() {
   check("finance: search", searched.ledger.total === 7 && searched.ledger.rows.every((t) => t.title.startsWith("tx 2")), searched.ledger.rows.map((t) => t.title));
   calls.length = 0;
   const pastEnd = await loadFinancePage(db, "2031-05-01", 9);
-  check("finance: a page past the end falls back to the last page", pastEnd.ledger.page === 3 && pastEnd.ledger.rows.length === 5 && calls.length === 2, [pastEnd.ledger.page, calls]);
+  check("finance: a page past the end falls back to the last page", pastEnd.ledger.page === 3 && pastEnd.ledger.rows.length === 6 && calls.length === 2, [pastEnd.ledger.page, calls]);
   const ledgerOnly = await listTransactionsPage(db, 2, { accountId: "11111111-1111-1111-1111-111111111111" });
   check("transactions: paged RPC on its own", ledgerOnly.page === 2 && ledgerOnly.rows.length === 10 && ledgerOnly.rows[0].title === "tx 15", ledgerOnly.rows[0]);
 
   calls.length = 0;
   const dashboard = await loadDashboard(db, TODAY, TZ);
   check("dashboard: one round trip", oneCall("dashboard_bundle"), calls);
-  check("dashboard: finance and subscriptions", dashboard.overview.income === 84 && dashboard.subscriptions.monthlyTotal === 55 && dashboard.subscriptions.yearlyTotal === 660, dashboard.subscriptions);
+  check("dashboard: finance and subscriptions", dashboard.overview.income === 84 && dashboard.overview.expense === 296 && dashboard.subscriptions.monthlyTotal === 55 && dashboard.subscriptions.yearlyTotal === 660, dashboard.subscriptions);
   check("dashboard: low stock only", dashboard.lowStock.length === 1 && dashboard.lowStock[0].name === "Resistors", dashboard.lowStock);
   check("dashboard: today's food and water against the goal", dashboard.day.nutrition?.calories === 644 && dashboard.day.hydration?.total_volume_ml === 500 && dashboard.day.remaining.water_ml === 2000 && dashboard.day.goal?.water_ml === 2500, dashboard.day);
   check("dashboard: week's workouts, upcoming booking, goals", dashboard.recentWorkouts.length === 1 && dashboard.upcoming.length === 1 && dashboard.goals.length === 1 && Number(dashboard.goalTotals[0]?.total) === 10 && dashboard.runningCosts.length === 1 && dashboard.projectCosts.length === 1, [dashboard.recentWorkouts.length, dashboard.upcoming.length, dashboard.goalTotals]);

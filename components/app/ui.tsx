@@ -162,54 +162,41 @@ export function Empty({ title, children }: { title: string; children?: ReactNode
   );
 }
 
-/** A list row: what it is on the left, the figure on the right. Stays readable on a phone. */
+/**
+ * A list row. From tablet width up it is one line: what it is on the left, the figure and the actions on the right.
+ * On a phone it is two lines, so the text is not squeezed beside the figure and the buttons:
+ * title and figure first, then the details and the actions. Nothing scrolls sideways.
+ */
 export function Row({ title, meta, value, sub, lead, actions }: { title: ReactNode; meta?: ReactNode; value?: ReactNode; sub?: ReactNode; lead?: ReactNode; actions?: ReactNode }) {
+  const figure = Boolean(value || sub);
+  // Phone grid rows: a status pill, when there is one, sits on its own line above the title.
+  const [first, second] = lead ? ["row-start-2", "row-start-3"] : ["row-start-1", "row-start-2"];
   return (
-    <li className="flex items-center gap-3 border-b px-4 py-3 last:border-b-0">
-      {lead}
-      <div className="min-w-0 flex-1">
-        <p className="truncate font-medium">{title}</p>
-        {meta && <p className="mt-0.5 truncate text-sm text-muted-foreground">{meta}</p>}
+    <li className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-b px-4 py-3 last:border-b-0 sm:flex">
+      {lead && <div className="col-span-2 row-start-1 justify-self-start sm:shrink-0">{lead}</div>}
+      <div className="contents sm:block sm:min-w-0 sm:flex-1">
+        <p className={cn("col-start-1 line-clamp-2 min-w-0 break-words font-medium sm:line-clamp-1", first, !figure && "col-span-2")}>{title}</p>
+        {meta && <p className={cn("col-start-1 line-clamp-2 min-w-0 break-words text-sm text-muted-foreground sm:mt-0.5 sm:line-clamp-1", second, !actions && "col-span-2")}>{meta}</p>}
       </div>
-      {(value || sub) && (
-        <div className="shrink-0 text-right">
+      {figure && (
+        <div className={cn("col-start-2 shrink-0 text-right", first)}>
           {value && <p className="figure text-sm font-medium">{value}</p>}
           {sub && <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>}
         </div>
       )}
-      {actions && <div className="flex shrink-0 items-center">{actions}</div>}
+      {actions && <div className={cn("col-start-2 flex shrink-0 items-center justify-end", meta || figure ? second : first)}>{actions}</div>}
     </li>
   );
 }
 
 /** Edit and delete controls at the end of a row, card header or table row. */
 export function RowActions({ children }: { children: ReactNode }) {
-  return <div className="flex shrink-0 items-center justify-end">{children}</div>;
+  // `row-actions` is how a table row finds its actions cell when it turns into a card on a phone.
+  return <div className="row-actions flex shrink-0 items-center justify-end">{children}</div>;
 }
 
-export function RowList({ children, className }: { children: ReactNode; className?: string }) {
-  return <ul className={cn("overflow-hidden rounded-xl border bg-card", className)}>{children}</ul>;
-}
-
-/** Wide tables scroll sideways inside their own frame instead of pushing the page. */
-export function Table({ head, children, minWidth = "36rem" }: { head: { label: string; right?: boolean }[]; children: ReactNode; minWidth?: string }) {
-  return (
-    <div className="overflow-x-auto rounded-xl border bg-card">
-      <table className="w-full border-collapse text-sm" style={{ minWidth }}>
-        <thead>
-          <tr className="border-b bg-muted/60">
-            {head.map((h) => (
-              <th key={h.label} scope="col" className={cn("eyebrow px-4 py-3 text-muted-foreground", h.right ? "text-right" : "text-left")}>
-                {h.label}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="[&>tr:last-child]:border-b-0 [&>tr]:border-b">{children}</tbody>
-      </table>
-    </div>
-  );
-}
+// Lists and tables page themselves ten rows at a time, which needs state: they live in paged.tsx.
+export { PAGE_SIZE, RowList, Table } from "./paged";
 
 export function Td({ children, right, className }: { children?: ReactNode; right?: boolean; className?: string }) {
   return <td className={cn("px-4 py-3 align-middle", right && "figure text-right", className)}>{children}</td>;

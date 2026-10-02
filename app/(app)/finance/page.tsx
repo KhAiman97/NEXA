@@ -30,6 +30,8 @@ import {
   deleteLiability,
   deleteSubscription,
   deleteTransaction,
+  payLiabilityInstalment,
+  paySubscription,
   recordLiabilityPayment,
   saveAssetValuation,
   saveMonthlyGoal,
@@ -50,6 +52,7 @@ import { EntryDialog } from "@/components/app/entry-dialog";
 import { LogoLoader } from "@/components/app/logo";
 import { ModuleTabs } from "@/components/app/module-tabs";
 import { Pager } from "@/components/app/pager";
+import { PaidTick, PayButton } from "@/components/app/pay-button";
 import { TransactionFilterBar } from "@/components/app/transaction-filters";
 import { RowActions, Empty, Figure, Meter, ModulePage, Panel, Pill, Row, RowList, Section, Table, Td } from "@/components/app/ui";
 
@@ -90,6 +93,7 @@ async function FinanceContent({ searchParams }: { searchParams: SearchParams }) 
   const {
     overview, cashflow: cashflowRows, ledger, categories: categoryRows, accounts: accountRows, subscriptions: subscriptionRows,
     subscriptionTotals, liabilities: liabilityRows, balances, assetValues: assetRows, assets: assetRecords, goals: goalRows,
+    paidSubscriptions, paidLiabilities,
   } = await loadFinancePage(db, monthOf(today), page, filters);
   const filtered = Object.values(filters).some(Boolean);
   const query = filterQuery(filters);
@@ -201,7 +205,7 @@ async function FinanceContent({ searchParams }: { searchParams: SearchParams }) 
       {sortedSubscriptions.length === 0 ? (
         <Empty title="No subscriptions yet">Add recurring bills to see what they cost each month.</Empty>
       ) : (
-        <Table head={[{ label: "Subscription" }, { label: "Type" }, { label: "Billed", right: true }, { label: "Per month", right: true }, { label: "Next bill", right: true }, { label: "" }]} minWidth="44rem">
+        <Table head={[{ label: "Subscription" }, { label: "Type" }, { label: "Billed", right: true }, { label: "Per month", right: true }, { label: "Next bill", right: true }, { label: "This month" }, { label: "" }]} minWidth="52rem">
           {sortedSubscriptions.map((s) => (
             <tr key={s.id} className={s.is_active ? undefined : "text-muted-foreground"}>
               <Td>
@@ -214,6 +218,13 @@ async function FinanceContent({ searchParams }: { searchParams: SearchParams }) 
               </Td>
               <Td right>{s.is_active ? rm(Number(s.monthly_cost)) : "—"}</Td>
               <Td right>{s.is_active ? (s.next_billing_on ? day(s.next_billing_on) : "—") : <Pill>Cancelled</Pill>}</Td>
+              <Td>
+                {!s.is_active ? "—" : paidSubscriptions.has(s.id) ? (
+                  <PaidTick on={day(paidSubscriptions.get(s.id)!, { day: "numeric", month: "short" })} />
+                ) : (
+                  <PayButton id={s.id} what={s.name} action={paySubscription} />
+                )}
+              </Td>
               <Td className="w-px text-right">
                 <RowActions>
 <EntryDialog label="Edit subscription" fields={subscriptionFields(categoryOptions, accountOptions)} edit={{ id: s.id, values: s }} update={updateSubscription} />
@@ -279,6 +290,16 @@ async function FinanceContent({ searchParams }: { searchParams: SearchParams }) 
                     <dd className="figure mt-0.5">{balance?.months_remaining ?? "—"}</dd>
                   </div>
                 </dl>
+                {l.status === "active" && outstanding > 0 && (
+                  <div className="mt-4 flex items-center justify-between gap-3 border-t pt-4">
+                    <p className="text-sm text-muted-foreground">{monthName(overview.month)}</p>
+                    {paidLiabilities.has(l.id) ? (
+                      <PaidTick on={day(paidLiabilities.get(l.id)!, { day: "numeric", month: "short" })} />
+                    ) : (
+                      <PayButton id={l.id} what={l.name} action={payLiabilityInstalment} />
+                    )}
+                  </div>
+                )}
               </Panel>
             );
           })}

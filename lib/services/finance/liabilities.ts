@@ -1,7 +1,7 @@
 import "server-only";
 import type { z } from "zod";
 import { createCrud, selectView, type Db } from "../crud";
-import { fromPostgrest } from "../errors";
+import { fromPostgrest, ServiceError } from "../errors";
 import { withLinkedExpense } from "./transactions";
 import {
   liabilityInput,
@@ -70,6 +70,30 @@ export async function recordPayment(db: Db, input: z.infer<typeof liabilityPayme
     await db.from("liabilities").update({ status: "paid_off" }).eq("id", liability_id).eq("status", "active");
   }
   return row;
+}
+
+/**
+ * "I have paid this": record this month's instalment, dated `paidOn`, with its matching expense. The
+ * amount is the monthly payment, or what is left if that is less. The daily job then skips this debt
+ * for the month because a payment exists.
+ */
+export async function payInstalment(db: Db, liabilityId: string, paidOn: string) {
+  const [{ data: balance, error }, { data: liability }] = await Promise.all([
+    db.from("liability_balances").select("monthly_payment, outstanding").eq("liability_id", liabilityId).maybeSingle(),
+    db.from("liabilities").select("account_id").eq("id", liabilityId).maybeSingle(),
+  ]);
+  if (error) throw fromPostgrest(error);
+  if (!balance) throw new ServiceError("not_found", "Record not found.");
+  if (!(Number(balance.outstanding) > 0)) throw new ServiceError("constraint_violation", "Nothing is left to pay on this debt.");
+  if (!(Number(balance.monthly_payment) > 0)) throw new ServiceError("constraint_violation", "Set a monthly payment on this debt first, or use Record payment.");
+
+  return recordPayment(db, {
+    liability_id: liabilityId,
+    paid_on: paidOn,
+    amount: Math.min(Number(balance.monthly_payment), Number(balance.outstanding)),
+    note: "Marked as paid",
+    record_expense: { account_id: liability?.account_id ?? null },
+  });
 }
 
 export async function deletePayment(db: Db, id: string): Promise<void> {

@@ -192,10 +192,10 @@ export async function listDailyExercise(db: Db, fromDay: string, toDay: string):
 export type FitnessPage = {
   workouts: Workout[];
   stats: RacketStats;
-  /** Latest 10 results. */
+  /** Latest 100 results, shown ten at a time. */
   results: RacketMatchResult[];
   bookings: CourtBooking[];
-  /** Latest 10 sessions. */
+  /** Latest 100 sessions, shown ten at a time. */
   sessions: ShootingSession[];
   shootingTrend: ShootingTrendPoint[];
   matches: RacketMatch[];
@@ -224,10 +224,10 @@ export async function loadFitnessPage(db: Db, today: string, dayRange: { from: s
   return {
     workouts: bundle.workouts,
     stats: racketStatsOf(bundle.match_results),
-    results: bundle.match_results.slice(0, 10),
+    results: bundle.match_results.slice(0, 100),
     bookings: bundle.bookings,
-    sessions: bundle.shooting_sessions.slice(0, 10),
-    shootingTrend: shootingTrendOf(bundle.shooting_sessions),
+    sessions: bundle.shooting_sessions,
+    shootingTrend: shootingTrendOf(bundle.shooting_sessions.slice(0, 60)),
     matches: bundle.matches,
     goals: bundle.exercise_goals,
     daily: bundle.daily_exercise,

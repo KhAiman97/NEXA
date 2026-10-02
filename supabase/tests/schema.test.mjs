@@ -287,5 +287,20 @@ check('job: balances follow the payments', Number((await as(C, `select outstandi
 check('job: other users are untouched', (await as(A, `select count(*)::int n from transactions where note like 'Recorded automatically%'`)).rows[0].n === 0)
 check('job: signed-in users cannot run it', !!(await expectErr(C, 'select public.post_due_recurring()')))
 
+// Marked as paid by hand (migration 13): the job must not record the same month again
+await as(C, `insert into subscriptions (id,name,amount,billing_cycle,next_billing_on) values ('c0000000-0000-0000-0000-0000000000b1','Paid early',20,'monthly','2032-06-15'), ('c0000000-0000-0000-0000-0000000000b2','Not paid',21,'monthly','2032-06-15')`)
+await as(C, `insert into transactions (type,amount,title,occurred_at,subscription_id) values ('expense',20,'Paid early','2032-06-03T12:00:00+08','c0000000-0000-0000-0000-0000000000b1')`)
+await as(C, `insert into liability_payments (liability_id,paid_on,amount) values ('c0000000-0000-0000-0000-0000000000a1','2032-06-02',300)`)
+const paidBefore = (await as(C, `select finance_bundle('2032-06-01') as j`)).rows[0].j
+check('finance_bundle: lists what is already paid this month', JSON.stringify(paidBefore.paid_subscriptions) === JSON.stringify([{ id: 'c0000000-0000-0000-0000-0000000000b1', paid_on: '2032-06-03' }]) && paidBefore.paid_liabilities.some(x => x.id === 'c0000000-0000-0000-0000-0000000000a1' && x.paid_on === '2032-06-02') && !paidBefore.paid_liabilities.some(x => x.id === 'c0000000-0000-0000-0000-0000000000a2'), JSON.stringify([paidBefore.paid_subscriptions, paidBefore.paid_liabilities]))
+const run6 = await job('2032-06-14T16:05:00Z') // 15 June in Kuala Lumpur
+const june = (await cTx()).filter(t => t.day.startsWith('2032-06') && ['Paid early', 'Not paid', 'Car loan payment'].includes(t.title))
+check('job: a subscription already paid this month is not charged again, the other one is', june.filter(t => t.title === 'Paid early').length === 1 && june.filter(t => t.title === 'Not paid').length === 1 && june.find(t => t.title === 'Not paid').day === '2032-06-15', JSON.stringify(june.map(t => [t.title, t.day])))
+check('job: its bill date still moves on', (await as(C, `select next_billing_on::text as d from subscriptions where name='Paid early'`)).rows[0].d === '2032-07-15')
+check('job: a debt paid by hand this month is skipped', !june.some(t => t.title === 'Car loan payment') && (await as(C, `select count(*)::int n from liability_payments where liability_id='c0000000-0000-0000-0000-0000000000a1' and paid_on >= '2032-06-01'`)).rows[0].n === 1, JSON.stringify(run6))
+const paidAfter = (await as(C, `select finance_bundle('2032-06-01') as j`)).rows[0].j
+check('finance_bundle: an automatic charge also counts as paid', paidAfter.paid_subscriptions.some(x => x.id === 'c0000000-0000-0000-0000-0000000000b2' && x.paid_on === '2032-06-15'))
+check('finance_bundle: other users see no paid marks from this one', (await as(A, `select finance_bundle('2032-06-01') as j`)).rows[0].j.paid_subscriptions.length === 0)
+
 console.log(`\n${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)

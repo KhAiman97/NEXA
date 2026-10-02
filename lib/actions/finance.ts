@@ -8,8 +8,10 @@ import {
 } from "@/lib/validators/finance";
 import { accounts, books, categories } from "@/lib/services/finance/reference";
 import { transactions } from "@/lib/services/finance/transactions";
-import { deletePayment, liabilities, recordPayment } from "@/lib/services/finance/liabilities";
-import { markBilled, subscriptions } from "@/lib/services/finance/subscriptions";
+import { deletePayment, liabilities, payInstalment, recordPayment } from "@/lib/services/finance/liabilities";
+import { markBilled, payNow, subscriptions } from "@/lib/services/finance/subscriptions";
+import { getProfile } from "@/lib/services/profile";
+import { todayIn } from "@/lib/utils/time";
 import { assets, deleteValuation, upsertValuation } from "@/lib/services/finance/assets";
 import { deleteMonthlyGoal, goals, setMonthlyGoal } from "@/lib/services/finance/goals";
 
@@ -44,6 +46,15 @@ export async function deleteLiabilityPayment(paymentId: unknown) { return run(({
 export async function createSubscription(input: unknown) { return run(({ db }) => subscriptions.create(db, parse(subscriptionInput, input)), F); }
 export async function updateSubscription(subscriptionId: unknown, patch: unknown) { return run(({ db }) => subscriptions.update(db, parse(id, subscriptionId), parse(partialOf(subscriptionInput), patch)), F); }
 export async function deleteSubscription(subscriptionId: unknown) { return run(({ db }) => subscriptions.remove(db, parse(id, subscriptionId)), F); }
+/** "Mark paid" on a subscription: records the charge now. */
+export async function paySubscription(subscriptionId: unknown) { return run(({ db }) => payNow(db, parse(id, subscriptionId)), [...F, "/dashboard"]); }
+/** "Mark paid" on a debt: records this month's instalment, dated today in the user's timezone. */
+export async function payLiabilityInstalment(liabilityId: unknown) {
+  return run(async ({ db, userId }) => {
+    const timezone = await getProfile(db, userId).then((p) => p.timezone, () => "Asia/Kuala_Lumpur");
+    return payInstalment(db, parse(id, liabilityId), todayIn(timezone));
+  }, [...F, "/dashboard"]);
+}
 export async function markSubscriptionBilled(subscriptionId: unknown) { return run(({ db }) => markBilled(db, parse(id, subscriptionId)), F); }
 
 // Assets

@@ -190,7 +190,7 @@ async function FitnessContent() {
   );
 
   const workoutsTab = (
-    <Section id="workouts" title="Recent workouts" hint="The latest 15 sessions of any kind." aside={<EntryDialog label="Add workout" fields={workoutFields} action={createWorkout} />}>
+    <Section id="workouts" title="Recent workouts" hint="Sessions of any kind, newest first." aside={<EntryDialog label="Add workout" fields={workoutFields} action={createWorkout} />}>
       {workoutRows.length === 0 ? (
         <Empty title="No workouts logged yet">Add a session to start your training log.</Empty>
       ) : (

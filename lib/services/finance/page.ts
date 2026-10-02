@@ -22,6 +22,8 @@ type FinanceBundle = {
   asset_values: AssetWithValue[];
   assets: Asset[];
   goals: Goal[];
+  paid_subscriptions: { id: string; paid_on: string }[];
+  paid_liabilities: { id: string; paid_on: string }[];
 };
 
 export type FinancePage = {
@@ -37,6 +39,10 @@ export type FinancePage = {
   assetValues: AssetWithValue[];
   assets: Asset[];
   goals: Goal[];
+  /** Subscription id -> date of this month's latest charge. Absent means not paid this month. */
+  paidSubscriptions: Map<string, string>;
+  /** Debt id -> date of this month's latest payment. */
+  paidLiabilities: Map<string, string>;
 };
 
 /** Everything the Finance page shows, in one round trip (the finance_bundle RPC). */
@@ -65,5 +71,7 @@ export async function loadFinancePage(db: Db, month: string, page: number, filte
     assetValues: bundle.asset_values,
     assets: bundle.assets,
     goals: bundle.goals,
+    paidSubscriptions: new Map(bundle.paid_subscriptions.map((p) => [p.id, p.paid_on])),
+    paidLiabilities: new Map(bundle.paid_liabilities.map((p) => [p.id, p.paid_on])),
   };
 }

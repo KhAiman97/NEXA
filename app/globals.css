@@ -132,6 +132,79 @@
   background-size: 20px 20px;
 }
 
+/* Tables (components/app/paged.tsx). The frame is measured, not the screen: where it is at least 48rem wide
+   the table is a normal table, as wide as its columns need. Narrower (every phone, and a desktop window
+   squeezed by the sidebar) each row is a card, so nothing scrolls sideways: the first cell is the heading,
+   the rest sit in columns under their column label (--l1, --l2, ... set on the table), actions go top right. */
+.stack-frame {
+  container-type: inline-size;
+}
+@container (min-width: 48rem) {
+  .stack-table {
+    min-width: var(--table-min);
+  }
+}
+@container (max-width: 47.999rem) {
+  .stack-table,
+  .stack-table tbody {
+    display: block;
+  }
+  .stack-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .stack-table tr {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+    gap: 0.625rem 1rem;
+    padding: 0.875rem 1rem;
+  }
+  .stack-table td {
+    display: block;
+    min-width: 0;
+    padding: 0;
+    text-align: left;
+    overflow-wrap: anywhere;
+  }
+  .stack-table td::before {
+    display: block;
+    margin-bottom: 0.125rem;
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: hsl(var(--muted-foreground));
+  }
+  .stack-table td:nth-child(2)::before { content: var(--l2); }
+  .stack-table td:nth-child(3)::before { content: var(--l3); }
+  .stack-table td:nth-child(4)::before { content: var(--l4); }
+  .stack-table td:nth-child(5)::before { content: var(--l5); }
+  .stack-table td:nth-child(6)::before { content: var(--l6); }
+  .stack-table td:nth-child(7)::before { content: var(--l7); }
+  .stack-table td:nth-child(8)::before { content: var(--l8); }
+  .stack-table td:nth-child(9)::before { content: var(--l9); }
+  /* The heading: full width, clear of the actions. */
+  .stack-table td:first-child {
+    grid-column: 1 / -1;
+    padding-right: 5.5rem;
+    font-size: 0.9375rem;
+  }
+  .stack-table td:has(> .row-actions) {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: auto;
+  }
+  .stack-table td:has(> .row-actions)::before {
+    content: none;
+  }
+}
+
 /* The NEXA wordmark from logo.png. Its brightness is used as a mask, so it takes the surrounding text colour
    and works on both themes. 616 x 96 is the cut-out's size. */
 .wordmark {
