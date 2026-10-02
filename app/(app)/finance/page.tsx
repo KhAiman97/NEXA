@@ -195,7 +195,7 @@ async function FinanceContent({ searchParams }: { searchParams: SearchParams }) 
     <Section
       id="subscriptions"
       title="Subscriptions"
-      hint={`${rm(subscriptionTotals.monthlyTotal)} a month, ${rm(subscriptionTotals.yearlyTotal)} a year across active subscriptions.`}
+      hint={`${rm(subscriptionTotals.monthlyTotal)} a month, ${rm(subscriptionTotals.yearlyTotal)} a year across active subscriptions. Each charge is added to your transactions on its bill date.`}
       aside={<EntryDialog label="Add subscription" fields={subscriptionFields(categoryOptions, accountOptions)} action={createSubscription} />}
     >
       {sortedSubscriptions.length === 0 ? (
@@ -231,7 +231,7 @@ async function FinanceContent({ searchParams }: { searchParams: SearchParams }) 
     <Section
       id="debts"
       title="Debts"
-      hint="What is still owed is the amount borrowed minus every payment recorded."
+      hint="What is still owed is the amount borrowed minus every payment recorded. Each month's payment is recorded on its due day unless you have already recorded one that month."
       aside={
         <>
           {liabilityRows.length > 0 && <EntryDialog label="Record payment" variant="outline" fields={liabilityPaymentFields(toOptions(liabilityRows))} action={recordLiabilityPayment} />}

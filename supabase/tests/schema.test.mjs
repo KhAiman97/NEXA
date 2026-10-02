@@ -237,5 +237,55 @@ for (const call of ['app_session()', 'finance_bundle(current_date)', 'vehicles_b
 await db.exec('reset role')
 check('bundles are not executable by anon', denied.length === 0, denied.join('; '))
 
+// Daily job (migration 12): due subscription charges and debt instalments post themselves
+const C = 'cccccccc-cccc-cccc-cccc-cccccccccccc'
+await db.exec(`insert into auth.users (id,email) values ('${C}','c@x.com')`)
+const job = async at => (await db.query(`select public.post_due_recurring('${at}') as j`)).rows[0].j
+const cTx = async () => (await as(C, `select title, amount::float8 as amount, to_char(occurred_at at time zone 'Asia/Kuala_Lumpur', 'YYYY-MM-DD') as day, note, subscription_id from transactions order by occurred_at, title`)).rows
+await as(C, `insert into finance_accounts (id,name) values ('c0000000-0000-0000-0000-000000000001','C-bank')`)
+await as(C, `insert into subscriptions (name,amount,billing_cycle,next_billing_on,is_active,auto_renew,account_id) values
+  ('Due today',10,'monthly','2032-03-10',true,true,'c0000000-0000-0000-0000-000000000001'),
+  ('Due tomorrow',11,'monthly','2032-03-11',true,true,null),
+  ('Cancelled',12,'monthly','2032-03-01',false,true,null),
+  ('No renewal',13,'monthly','2032-03-01',true,false,null),
+  ('Long overdue',14,'monthly','2031-11-20',true,true,null),
+  ('Weekly',5,'weekly','2032-02-25',true,true,null)`)
+// 00:05 on 10 March 2032 in Kuala Lumpur
+const run1 = await job('2032-03-09T16:05:00Z')
+let tx = await cTx()
+check('job: posts what is due today, not tomorrow, cancelled or non-renewing', tx.filter(t => t.title === 'Due today').length === 1 && !tx.some(t => ['Due tomorrow', 'Cancelled', 'No renewal'].includes(t.title)), JSON.stringify(tx.map(t => t.title)))
+check('job: the charge lands on the billing date with the subscription\'s account', tx.find(t => t.title === 'Due today').day === '2032-03-10' && tx.find(t => t.title === 'Due today').note === 'Recorded automatically' && tx.find(t => t.title === 'Due today').subscription_id !== null && (await as(C, `select account_id from transactions where title='Due today'`)).rows[0].account_id === 'c0000000-0000-0000-0000-000000000001')
+check('job: catches up only the last 31 days', tx.filter(t => t.title === 'Long overdue').length === 1 && tx.find(t => t.title === 'Long overdue').day === '2032-02-20' && tx.filter(t => t.title === 'Weekly').map(t => t.day).join() === '2032-02-25,2032-03-03,2032-03-10', JSON.stringify(tx.filter(t => ['Long overdue', 'Weekly'].includes(t.title)).map(t => [t.title, t.day])))
+const nextDates = Object.fromEntries((await as(C, `select name, next_billing_on::text as d from subscriptions`)).rows.map(r => [r.name, r.d]))
+check('job: billing dates move on by one cycle', nextDates['Due today'] === '2032-04-10' && nextDates['Long overdue'] === '2032-03-20' && nextDates['Weekly'] === '2032-03-17' && nextDates['Due tomorrow'] === '2032-03-11' && nextDates['No renewal'] === '2032-03-01', JSON.stringify(nextDates))
+check('job: reports what it posted', run1.subscription_charges === 5 && run1.debt_payments === 0, JSON.stringify(run1))
+const run2 = await job('2032-03-09T20:00:00Z')
+check('job: a second run the same day posts nothing', run2.subscription_charges === 0 && (await cTx()).length === tx.length, JSON.stringify(run2))
+const run3 = await job('2032-03-10T16:05:00Z')
+check('job: the next day posts the next one', run3.subscription_charges === 1 && (await cTx()).some(t => t.title === 'Due tomorrow' && t.day === '2032-03-11'), JSON.stringify(run3))
+
+await as(C, `insert into liabilities (id,name,principal,monthly_payment,due_day,starts_on,account_id) values
+  ('c0000000-0000-0000-0000-0000000000a1','Car loan',1000,300,15,'2032-01-15','c0000000-0000-0000-0000-000000000001'),
+  ('c0000000-0000-0000-0000-0000000000a2','Paid by hand',1000,100,15,'2032-01-15',null),
+  ('c0000000-0000-0000-0000-0000000000a3','Nearly done',250,200,31,'2032-01-31',null),
+  ('c0000000-0000-0000-0000-0000000000a4','Not started',500,100,5,'2032-06-20',null),
+  ('c0000000-0000-0000-0000-0000000000a5','No due day',500,100,null,null,null)`)
+await as(C, `insert into liability_payments (liability_id,paid_on,amount) values ('c0000000-0000-0000-0000-0000000000a2','2032-04-03',100), ('c0000000-0000-0000-0000-0000000000a3','2032-03-31',200)`)
+const pays = async () => (await as(C, `select l.name, p.paid_on::text as day, p.amount::float8 as amount, p.note, p.transaction_id from liability_payments p join liabilities l on l.id = p.liability_id order by p.paid_on, l.name`)).rows
+check('job: nothing before the due day', (await job('2032-04-13T16:05:00Z')).debt_payments === 0)
+const run4 = await job('2032-04-14T16:05:00Z') // 15 April in Kuala Lumpur
+let ps = await pays()
+const car = ps.find(x => x.name === 'Car loan')
+check('job: the instalment is recorded on its due day with a matching expense', run4.debt_payments === 1 && car && car.day === '2032-04-15' && car.amount === 300 && car.note === 'Recorded automatically' && car.transaction_id !== null && (await cTx()).some(t => t.title === 'Car loan payment' && t.amount === 300 && t.day === '2032-04-15'), JSON.stringify([run4, car]))
+check('job: skips a debt already paid by hand this month, one not started and one with no due day', ps.filter(x => x.name === 'Paid by hand').length === 1 && !ps.some(x => ['Not started', 'No due day'].includes(x.name)), JSON.stringify(ps.map(x => [x.name, x.day])))
+check('job: a second run does not pay twice', (await job('2032-04-14T22:00:00Z')).debt_payments === 0)
+const run5 = await job('2032-04-29T16:05:00Z') // 30 April: due day 31 falls on the last day of the month
+ps = await pays()
+const last = ps.filter(x => x.name === 'Nearly done').at(-1)
+check('job: the last instalment is only what is left, on the month\'s last day, and closes the debt', run5.debt_payments === 1 && last.day === '2032-04-30' && last.amount === 50 && (await as(C, `select status from liabilities where name='Nearly done'`)).rows[0].status === 'paid_off', JSON.stringify([run5, last]))
+check('job: balances follow the payments', Number((await as(C, `select outstanding from liability_balances where name='Car loan'`)).rows[0].outstanding) === 700)
+check('job: other users are untouched', (await as(A, `select count(*)::int n from transactions where note like 'Recorded automatically%'`)).rows[0].n === 0)
+check('job: signed-in users cannot run it', !!(await expectErr(C, 'select public.post_due_recurring()')))
+
 console.log(`\n${pass} passed, ${fail} failed`)
 process.exit(fail ? 1 : 0)

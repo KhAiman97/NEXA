@@ -77,7 +77,7 @@ export const subscriptionFields = (categories: Option[], accounts: Option[]): Fi
   { name: "vendor", label: "Billed by", type: "text", half: true },
   { name: "amount", label: "Amount per bill", type: "number", required: true, half: true, step: "0.01" },
   { name: "billing_cycle", label: "Billed", type: "select", required: true, half: true, defaultValue: "monthly", options: opts(["weekly", "monthly", "quarterly", "yearly"]) },
-  { name: "next_billing_on", label: "Next bill date", type: "date", half: true },
+  { name: "next_billing_on", label: "Next bill date", type: "date", half: true, hint: "The charge is recorded on this date, then it moves on." },
   { name: "account_id", label: "Paid from", type: "select", half: true, options: accounts },
   { name: "category_id", label: "Category", type: "select", options: categories },
   { name: "is_active", label: "Active", type: "checkbox", defaultValue: true, hint: "Untick when the subscription is cancelled." },
@@ -90,7 +90,7 @@ export const liabilityFields = (accounts: Option[]): Field[] => [
   { name: "principal", label: "Amount borrowed", type: "number", required: true, half: true, step: "0.01" },
   { name: "opening_paid", label: "Already repaid", type: "number", half: true, step: "0.01", defaultValue: 0 },
   { name: "monthly_payment", label: "Monthly payment", type: "number", required: true, half: true, step: "0.01" },
-  { name: "due_day", label: "Due day of month", type: "number", half: true, step: "1", min: 1 },
+  { name: "due_day", label: "Due day of month", type: "number", half: true, step: "1", min: 1, hint: "The payment is recorded on this day each month." },
   { name: "account_id", label: "Paid from", type: "select", half: true, options: accounts },
   { name: "status", label: "Status", type: "select", required: true, half: true, defaultValue: "active", options: opts(["active", "paid_off", "defaulted"]) },
 ];
