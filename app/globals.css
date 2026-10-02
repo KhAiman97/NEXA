@@ -297,6 +297,152 @@
   }
 }
 
+/* Pull to refresh (components/app/pull-to-refresh.tsx): the mark fills from the bottom as the finger pulls,
+   then a light sweeps through it and an arc orbits it while the page reloads. */
+.ptr-mark {
+  width: 1.375rem;
+  height: 1.375rem;
+  -webkit-mask: url("/brand/mark-alpha.png") center / contain no-repeat;
+  mask: url("/brand/mark-alpha.png") center / contain no-repeat;
+  background: linear-gradient(to top, hsl(var(--foreground)) var(--fill, 0%), hsl(var(--foreground) / 0.28) var(--fill, 0%));
+}
+.ptr-mark-live {
+  background: linear-gradient(
+    115deg,
+    hsl(var(--foreground) / 0.4) 0%,
+    hsl(var(--foreground) / 0.4) 32%,
+    hsl(var(--foreground)) 50%,
+    hsl(var(--foreground) / 0.4) 68%,
+    hsl(var(--foreground) / 0.4) 100%
+  );
+  background-size: 320% 100%;
+  animation: logo-sweep 1s cubic-bezier(0.6, 0, 0.3, 1) infinite;
+}
+.ptr-orbit {
+  position: absolute;
+  inset: -1px;
+  border-radius: 9999px;
+  background: conic-gradient(from var(--beam-angle), transparent 0 60%, hsl(var(--foreground) / 0.15) 72%, hsl(var(--foreground)) 100%);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+  animation: beam 0.9s linear infinite;
+}
+
+/* Welcome (components/app/welcome-splash.tsx): the full logo right after signing in. Always on black,
+   because the logo is white on black. It comes into focus, rings spread from behind the mark, a band of
+   light crosses the logo (masked to its shape), then the whole screen lifts away. */
+.welcome {
+  animation: welcome-in 0.25s ease-out both;
+}
+.welcome[data-leaving] {
+  animation: welcome-out 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+/* The artwork fills only the middle half of logo.png, so the stage is wider than a phone screen:
+   the black margins run off the edges and the logo itself lands at about two thirds of the width. */
+.welcome-stage {
+  position: relative;
+  flex: none;
+  width: min(135vw, 38rem);
+  aspect-ratio: 1;
+}
+.welcome-art {
+  position: absolute;
+  inset: 0;
+  animation: welcome-focus 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.welcome-logo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.welcome-logo-dim {
+  filter: brightness(0.32);
+}
+/* Uncovered left to right behind a slanted soft edge, in step with the band of light. */
+.welcome-logo-lit {
+  -webkit-mask: linear-gradient(110deg, #000 46%, transparent 54%) 100% 0 / 300% 100% no-repeat;
+  mask: linear-gradient(110deg, #000 46%, transparent 54%) 100% 0 / 300% 100% no-repeat;
+  animation: welcome-uncover 1.1s cubic-bezier(0.5, 0, 0.3, 1) 0.7s both;
+}
+.welcome-shine {
+  position: absolute;
+  inset: 0;
+  -webkit-mask: url("/brand/logo-alpha.png") center / contain no-repeat;
+  mask: url("/brand/logo-alpha.png") center / contain no-repeat;
+  background: linear-gradient(110deg, transparent 44%, #fff 50%, transparent 56%) 100% 0 / 300% 100% no-repeat;
+  filter: drop-shadow(0 0 10px rgb(255 255 255 / 0.9));
+  animation: welcome-light 1.1s cubic-bezier(0.5, 0, 0.3, 1) 0.7s both;
+}
+/* Centred on the mark, which sits a little above the middle of the logo. */
+.welcome-ring {
+  position: absolute;
+  left: 50%;
+  top: 43%;
+  width: 30%;
+  aspect-ratio: 1;
+  border-radius: 9999px;
+  border: 2px solid rgb(255 255 255 / 0.45);
+  transform: translate(-50%, -50%) scale(0.7);
+  opacity: 0;
+  animation: welcome-ring 2s cubic-bezier(0.2, 0.6, 0.3, 1) 0.3s both;
+}
+.welcome-ring-late {
+  animation-delay: 0.95s;
+}
+@keyframes welcome-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes welcome-out {
+  to {
+    opacity: 0;
+    transform: scale(1.06);
+  }
+}
+@keyframes welcome-focus {
+  from {
+    opacity: 0;
+    transform: scale(0.86);
+    filter: blur(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+/* The band of light and the edge that uncovers the lit logo slide across together: same timing, same slant. */
+@keyframes welcome-light {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0% 0;
+  }
+}
+@keyframes welcome-uncover {
+  from {
+    -webkit-mask-position: 100% 0;
+    mask-position: 100% 0;
+  }
+  to {
+    -webkit-mask-position: 0% 0;
+    mask-position: 0% 0;
+  }
+}
+@keyframes welcome-ring {
+  from {
+    transform: translate(-50%, -50%) scale(0.7);
+    opacity: 0.7;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(2.6);
+    opacity: 0;
+  }
+}
+
 /* Beam: a light that travels around a panel's border. */
 @property --beam-angle {
   syntax: "<angle>";
@@ -375,7 +521,24 @@
     background: hsl(var(--foreground));
   }
   .logo-ripple,
-  .logo-orbit {
+  .logo-orbit,
+  .ptr-orbit,
+  .welcome-ring,
+  .welcome-shine {
     display: none;
+  }
+  .ptr-mark-live {
+    animation: none;
+    background: hsl(var(--foreground));
+  }
+  .welcome,
+  .welcome[data-leaving],
+  .welcome-art {
+    animation-duration: 0.01s;
+  }
+  .welcome-logo-lit {
+    animation: none;
+    -webkit-mask: none;
+    mask: none;
   }
 }

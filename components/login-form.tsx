@@ -1,5 +1,6 @@
 "use client";
 
+import { WELCOME_FLAG } from "@/components/app/welcome-splash";
 import { createClient } from "@/lib/supabase/client";
 import { AuthError, AuthHeading } from "@/components/auth-form";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,12 @@ export function LoginForm() {
         password,
       });
       if (error) throw error;
+      // The app greets a fresh sign-in with the logo (components/app/welcome-splash.tsx).
+      try {
+        sessionStorage.setItem(WELCOME_FLAG, "1");
+      } catch {
+        /* storage blocked: sign in without the greeting */
+      }
       router.push("/dashboard");
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "Sign-in failed. Try again.");

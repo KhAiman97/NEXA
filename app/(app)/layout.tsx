@@ -3,6 +3,7 @@ import { Account, AccountSkeleton } from "@/components/app/account";
 import { Brand } from "@/components/app/brand";
 import { BottomNav, SideNav } from "@/components/app/nav";
 import { PullToRefresh } from "@/components/app/pull-to-refresh";
+import { WelcomeSplash } from "@/components/app/welcome-splash";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -31,6 +32,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       <BottomNav />
       <PullToRefresh />
+      <WelcomeSplash />
     </div>
   );
 }

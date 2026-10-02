@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
-import { RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /** How far the finger has to travel before letting go refreshes, and the furthest the indicator follows it. */
@@ -78,8 +77,11 @@ export function PullToRefresh() {
       className="pointer-events-none fixed inset-x-0 top-[env(safe-area-inset-top)] z-50 flex justify-center"
       style={{ transform: `translateY(${offset - 28}px)`, opacity: Math.min(1, offset / TRIGGER_PX) }}
     >
-      <span className={cn("flex size-10 items-center justify-center rounded-full border bg-card shadow-lg transition-colors", (ready || refreshing) && "border-mod text-mod")}>
-        <RefreshCw aria-hidden className={cn("size-5", refreshing && "animate-spin")} style={refreshing ? undefined : { transform: `rotate(${pull * 3}deg)` }} />
+      {/* The Nexa mark: it fills from the bottom as you pull, and once let go a light sweeps through it
+          while an arc orbits the chip (styles in globals.css). */}
+      <span className={cn("relative flex size-11 items-center justify-center rounded-full border bg-card shadow-lg transition-transform", ready && !refreshing && "scale-110")}>
+        {refreshing && <span aria-hidden className="ptr-orbit" />}
+        <span aria-hidden className={cn("ptr-mark", refreshing && "ptr-mark-live")} style={{ "--fill": `${Math.min(100, (pull / TRIGGER_PX) * 100)}%` } as CSSProperties} />
       </span>
     </div>
   );
