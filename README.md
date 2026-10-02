@@ -26,6 +26,10 @@ npm run dev          # http://localhost:3000
 npm test             # typecheck + schema tests + validator checks
 ```
 
+## Deploy
+
+Hosted on Vercel: every push to `main` builds and deploys to production.
+
 ## Install on your phone (PWA)
 
 A PWA needs **HTTPS** (only `localhost` is exempt, and that's your laptop, not your phone). Deploy it, then:
