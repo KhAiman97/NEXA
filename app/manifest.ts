@@ -1,6 +1,13 @@
 import type { MetadataRoute } from "next";
 import { BRAND } from "@/lib/pwa/icon";
 
+/**
+ * Bump when a maskable icon's artwork changes. Browsers and the service worker cache icons by URL, and an
+ * installed app only picks up a new icon when the URL in the manifest changes: v1 had the NEXA wordmark
+ * running off the bottom edge, which Android's launch screen clipped.
+ */
+const MASKABLE_VERSION = 2;
+
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
@@ -22,8 +29,8 @@ export default function manifest(): MetadataRoute.Manifest {
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
       { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
       // Maskable: the mark sits inside the centre 80% so Android's icon shapes don't clip it.
-      { src: "/icons/maskable-192.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
-      { src: "/icons/maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+      { src: `/icons/maskable-192.png?v=${MASKABLE_VERSION}`, sizes: "192x192", type: "image/png", purpose: "maskable" },
+      { src: `/icons/maskable-512.png?v=${MASKABLE_VERSION}`, sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
   };
 }

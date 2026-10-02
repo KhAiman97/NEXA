@@ -10,14 +10,14 @@
  * Cross-origin requests (Supabase, fonts, etc.) are left entirely to the browser.
  * Bump VERSION on any change to this file: the old caches are dropped on activate.
  */
-const VERSION = "v3";
+const VERSION = "v4";
 const SHELL_CACHE = `nexa-shell-${VERSION}`;
 const STATIC_CACHE = `nexa-static-${VERSION}`;
 const ASSET_CACHE = `nexa-assets-${VERSION}`;
 const CURRENT = new Set([SHELL_CACHE, STATIC_CACHE, ASSET_CACHE]);
 
 const OFFLINE_URL = "/offline";
-const SHELL_ASSETS = ["/icons/icon-192.png", "/icons/icon-512.png", "/icons/maskable-192.png"];
+const SHELL_ASSETS = ["/icons/icon-192.png", "/icons/icon-512.png"];
 
 /** Caps on the runtime caches, so a long-lived install can't grow without bound. */
 const STATIC_LIMIT = 220;
