@@ -5,7 +5,7 @@
  * a lot (rice quantity, oil, gravy), so treat them as estimates and edit a food after saving it if
  * yours differs.
  */
-export type CatalogueGroup = "Rice" | "Masakan panas" | "Noodles" | "Western" | "Roti and breads" | "Sides and protein" | "Soups and porridge" | "Kuih and dessert" | "Drinks";
+export type CatalogueGroup = "Rice" | "Masakan panas" | "Noodles" | "Western" | "Roti and breads" | "Sides and protein" | "Vegetables" | "Soups and porridge" | "Kuih and dessert" | "Drinks";
 
 export type CatalogueFood = {
   /** Stable id used by the server actions. */
@@ -32,7 +32,7 @@ const food = (key: string, name: string, group: CatalogueGroup, serving: [number
   fat_g,
 });
 
-export const CATALOGUE_GROUPS: CatalogueGroup[] = ["Rice", "Masakan panas", "Noodles", "Western", "Roti and breads", "Sides and protein", "Soups and porridge", "Kuih and dessert", "Drinks"];
+export const CATALOGUE_GROUPS: CatalogueGroup[] = ["Rice", "Masakan panas", "Noodles", "Western", "Roti and breads", "Sides and protein", "Vegetables", "Soups and porridge", "Kuih and dessert", "Drinks"];
 
 export const MALAYSIAN_FOODS: CatalogueFood[] = [
   // Rice
@@ -191,6 +191,25 @@ export const MALAYSIAN_FOODS: CatalogueFood[] = [
   food("sayur-campur", "Sayur campur goreng", "Sides and protein", [1, "serving"], 110, 3, 10, 7),
   food("kangkung-belacan", "Kangkung belacan", "Sides and protein", [1, "serving"], 130, 4, 8, 9),
   food("tempe-goreng", "Tempe goreng", "Sides and protein", [3, "pieces"], 190, 12, 9, 12),
+
+  // Vegetables: plain, raw or steamed/boiled with no oil (the stir-fried ones are under Sides and Masakan panas).
+  food("salad-leaves", "Mixed salad leaves", "Vegetables", [1, "bowl"], 10, 0.7, 1.5, 0.1),
+  food("lettuce", "Lettuce", "Vegetables", [1, "cup"], 8, 0.6, 1.5, 0.1),
+  food("garden-salad", "Garden salad with dressing", "Vegetables", [1, "bowl"], 150, 2, 8, 12),
+  food("cucumber", "Timun (cucumber)", "Vegetables", [100, "g"], 15, 0.7, 3.6, 0.1),
+  food("tomato", "Tomato", "Vegetables", [1, "medium"], 22, 1.1, 4.8, 0.2),
+  food("carrot", "Carrot", "Vegetables", [1, "medium"], 25, 0.6, 6, 0.1),
+  food("broccoli", "Broccoli (steamed)", "Vegetables", [1, "cup"], 31, 2.6, 6, 0.3),
+  food("cabbage", "Kobis (cabbage, boiled)", "Vegetables", [1, "cup"], 17, 1, 4, 0.1),
+  food("spinach", "Bayam (spinach, boiled)", "Vegetables", [1, "cup"], 21, 2.7, 3.4, 0.2),
+  food("long-beans", "Kacang panjang (boiled)", "Vegetables", [100, "g"], 47, 2.5, 9.2, 0.1),
+  food("okra", "Bendi (okra, boiled)", "Vegetables", [100, "g"], 22, 1.9, 4.5, 0.2),
+  food("bean-sprouts", "Taugeh (bean sprouts)", "Vegetables", [1, "cup"], 31, 3, 6, 0.2),
+  food("mixed-veg-steamed", "Mixed vegetables (steamed)", "Vegetables", [1, "cup"], 60, 3, 12, 0.3),
+  food("ulam", "Ulam (raw herbs and greens)", "Vegetables", [1, "serving"], 15, 1, 3, 0.2),
+  food("corn", "Jagung (corn on the cob)", "Vegetables", [1, "cob"], 90, 3.3, 19, 1.4),
+  food("sweet-potato", "Keledek (sweet potato, boiled)", "Vegetables", [1, "medium"], 112, 2, 26, 0.2),
+  food("avocado", "Avocado", "Vegetables", [0.5, "fruit"], 160, 2, 9, 15),
 
   // Soups and porridge
   food("soto-ayam", "Soto ayam", "Soups and porridge", [1, "bowl"], 430, 24, 50, 14),
