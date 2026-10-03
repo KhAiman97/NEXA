@@ -3,7 +3,7 @@ import { partialOf } from "../lib/validators/common";
 import { accountInput, transactionInput, monthlyGoalInput } from "../lib/validators/finance";
 import { projectInput } from "../lib/validators/projects";
 import { fillAmounts, fuelLogInput } from "../lib/validators/vehicles";
-import { CATALOGUE_GROUPS, MALAYSIAN_FOODS } from "../lib/app/malaysian-foods";
+import { CATALOGUE_GROUPS, MALAYSIAN_FOODS, MENU_DRINKS, MENU_MEALS } from "../lib/app/malaysian-foods";
 
 let failed = 0;
 const check = (name: string, ok: boolean, detail?: unknown) => {
@@ -62,6 +62,8 @@ check("menu: calories agree with the macros within 15%", off.length === 0, off.j
 check("menu: the bakar dishes and Nescafe are there", ["nasi-lemak-bakar", "ayam-bakar", "daging-bakar", "lemak-bakar", "nasi-kerabu-daging-bakar", "nasi-kerabu-lemak-bakar", "nescafe-ais", "aimans-coffee"].every((k) => MALAYSIAN_FOODS.some((f) => f.key === k)));
 check("menu: the western dishes are there", ["pasta-bolognese", "meatballs", "roasted-chicken", "grilled-chicken", "chicken-chop"].every((k) => MALAYSIAN_FOODS.some((f) => f.key === k && f.group === "Western")) && MALAYSIAN_FOODS.some((f) => f.key === "rotiboy"));
 check("menu: vegetables are there", ["salad-leaves", "lettuce", "broccoli", "cucumber"].every((k) => MALAYSIAN_FOODS.some((f) => f.key === k && f.group === "Vegetables")));
+check("menu: every drink has a volume and caffeine, and only drinks do", MENU_DRINKS.length > 0 && MENU_DRINKS.every((d) => d.volume_ml! > 0 && d.caffeine_mg != null) && MENU_MEALS.every((f) => f.volume_ml == null && f.group !== "Drinks"));
+check("menu: meals and drinks together are the whole menu", MENU_MEALS.length + MENU_DRINKS.length === MALAYSIAN_FOODS.length && MENU_DRINKS.some((d) => d.key === "aimans-coffee"));
 check("menu: the masakan panas dishes are there", ["nasi-goreng-kampung", "nasi-goreng-daging-merah", "nasi-goreng-sotong", "nasi-goreng-udang", "telur-mata", "paprik-ayam", "kuey-teow-kungfu", "tomyam-seafood"].every((k) => MALAYSIAN_FOODS.some((f) => f.key === k && f.group === "Masakan panas")));
 
 console.log(failed ? `\n${failed} FAILED` : "\nall passed");

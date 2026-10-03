@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { run, parse } from "./run";
-import { MALAYSIAN_FOODS } from "@/lib/app/malaysian-foods";
+import { MALAYSIAN_FOODS, MENU_DRINKS } from "@/lib/app/malaysian-foods";
 import type { Db } from "@/lib/services/crud";
 import { ServiceError } from "@/lib/services/errors";
 import { id, partialOf } from "@/lib/validators/common";
@@ -42,6 +42,19 @@ async function ensureMenuFood(db: Db, key: string) {
 }
 
 export async function saveMenuFood(input: unknown) { return run(({ db }) => ensureMenuFood(db, parse(menuItem, input).key), N); }
+
+/** Log one glass or cup of a menu drink now, as a drink: fluid, caffeine and calories. */
+export async function logMenuDrink(input: unknown) {
+  return run(({ db }) => {
+    const { key } = parse(menuItem, input);
+    const item = MENU_DRINKS.find((f) => f.key === key);
+    if (!item) throw new ServiceError("not_found", "That drink is not on the menu.");
+    return hydrationLogs.create(
+      db,
+      parse(hydrationInput, { beverage: item.name, volume_ml: item.volume_ml ?? 250, caffeine_mg: item.caffeine_mg ?? 0, calories: item.calories }),
+    );
+  }, [...N, "/dashboard"]);
+}
 
 /** Log one serving of a menu dish as a meal now, saving it to the library first if needed. */
 export async function logMenuFood(input: unknown) {

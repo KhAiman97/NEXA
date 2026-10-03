@@ -46,6 +46,7 @@ export const hydrationInput = z.object({
   beverage: z.string().trim().min(1).max(100).default("water"),
   volume_ml: z.number().int().min(1).max(5000),
   caffeine_mg: c.nonNegNumber.max(2000).default(0),
+  calories: c.nonNegNumber.max(5000).default(0),
   note: c.optionalText,
 });
 
@@ -57,4 +58,4 @@ export type NutritionGoal = z.infer<typeof nutritionGoalInput> & { user_id: stri
 export type HydrationLog = RowOf<typeof hydrationInput>;
 
 export type DailyNutrition = { user_id: string; day: string; calories: number; protein_g: number; carbs_g: number; fat_g: number; entries: number };
-export type DailyHydration = { user_id: string; day: string; total_volume_ml: number; total_caffeine_mg: number; drinks: number };
+export type DailyHydration = { user_id: string; day: string; total_volume_ml: number; total_caffeine_mg: number; drinks: number; total_calories?: number };

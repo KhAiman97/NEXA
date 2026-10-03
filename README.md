@@ -47,7 +47,7 @@ Set `NEXT_PUBLIC_SITE_URL` to your deployed URL so metadata/OG links are correct
 
 ```
 supabase/
-  migrations/          14 ordered SQL files (schema, RLS, views, triggers, grants, exercise goals, indexes, page RPCs, daily job, paid marks, odometer list)
+  migrations/          15 ordered SQL files (schema, RLS, views, triggers, grants, exercise goals, indexes, page RPCs, daily job, paid marks, odometer list, drink calories)
   tests/schema.test.mjs  in-memory Postgres test: RLS, FKs, views, generated columns
 app/
   (app)/               signed-in shell (sidebar + bottom tabs) and one page per module:

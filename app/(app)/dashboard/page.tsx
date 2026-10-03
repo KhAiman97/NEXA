@@ -146,7 +146,7 @@ async function OverviewContent() {
           <ModuleCard
             module="nutrition"
             facts={[
-              { label: "Energy today", value: `${num(dayRows?.nutrition?.calories)} kcal`, hint: goal?.calories ? `of ${num(goal.calories)} kcal` : undefined },
+              { label: "Energy today", value: `${num(dayRows?.energy)} kcal`, hint: goal?.calories ? `of ${num(goal.calories)} kcal` : undefined },
               { label: "Water today", value: `${num(dayRows?.hydration?.total_volume_ml)} ml`, hint: goal ? `of ${num(goal.water_ml)} ml` : undefined },
               { label: "Caffeine today", value: `${num(dayRows?.hydration?.total_caffeine_mg)} mg`, hint: goal ? `limit ${num(goal.caffeine_limit_mg)} mg` : undefined },
             ]}

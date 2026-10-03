@@ -64,6 +64,8 @@ export type DaySummary = {
   day: string;
   nutrition: Omit<DailyNutrition, "user_id" | "day"> | null;
   hydration: Omit<DailyHydration, "user_id" | "day"> | null;
+  /** Energy from meals and drinks together, in kcal. */
+  energy: number;
   goal: NutritionGoal | null;
   /** Remaining headroom against goals (null when no goal is set). */
   remaining: { calories: number | null; water_ml: number | null; caffeine_mg: number | null };
@@ -82,13 +84,15 @@ export type DayParts = {
 
 export function toDaySummary(day: string, parts: DayParts): DaySummary {
   const { nutrition: n, hydration: h, goal } = parts;
+  const energy = Number(n?.calories ?? 0) + Number(h?.total_calories ?? 0);
   return {
     day,
+    energy,
     nutrition: n && { calories: Number(n.calories), protein_g: Number(n.protein_g), carbs_g: Number(n.carbs_g), fat_g: Number(n.fat_g), entries: n.entries },
-    hydration: h && { total_volume_ml: Number(h.total_volume_ml), total_caffeine_mg: Number(h.total_caffeine_mg), drinks: h.drinks },
+    hydration: h && { total_volume_ml: Number(h.total_volume_ml), total_caffeine_mg: Number(h.total_caffeine_mg), drinks: h.drinks, total_calories: Number(h.total_calories ?? 0) },
     goal,
     remaining: {
-      calories: goal?.calories != null ? goal.calories - Number(n?.calories ?? 0) : null,
+      calories: goal?.calories != null ? goal.calories - energy : null,
       water_ml: goal ? goal.water_ml - Number(h?.total_volume_ml ?? 0) : null,
       caffeine_mg: goal ? goal.caffeine_limit_mg - Number(h?.total_caffeine_mg ?? 0) : null,
     },

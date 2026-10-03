@@ -18,6 +18,9 @@ export type CatalogueFood = {
   protein_g: number;
   carbs_g: number;
   fat_g: number;
+  /** Drinks only: one glass or cup, so logging it counts toward fluid and caffeine. */
+  volume_ml?: number;
+  caffeine_mg?: number;
 };
 
 const food = (key: string, name: string, group: CatalogueGroup, serving: [number, string], calories: number, protein_g: number, carbs_g: number, fat_g: number): CatalogueFood => ({
@@ -30,6 +33,13 @@ const food = (key: string, name: string, group: CatalogueGroup, serving: [number
   protein_g,
   carbs_g,
   fat_g,
+});
+
+/** A drink: nutrition as for a dish, plus the volume and caffeine of one glass or cup. */
+const drink = (key: string, name: string, serving: [number, string], volume_ml: number, caffeine_mg: number, calories: number, protein_g: number, carbs_g: number, fat_g: number): CatalogueFood => ({
+  ...food(key, name, "Drinks", serving, calories, protein_g, carbs_g, fat_g),
+  volume_ml,
+  caffeine_mg,
 });
 
 export const CATALOGUE_GROUPS: CatalogueGroup[] = ["Rice", "Masakan panas", "Noodles", "Western", "Roti and breads", "Sides and protein", "Vegetables", "Soups and porridge", "Kuih and dessert", "Drinks"];
@@ -227,19 +237,38 @@ export const MALAYSIAN_FOODS: CatalogueFood[] = [
   food("cendol", "Cendol", "Kuih and dessert", [1, "bowl"], 390, 4, 62, 15),
   food("ais-kacang", "Ais kacang (ABC)", "Kuih and dessert", [1, "bowl"], 320, 6, 68, 4),
 
-  // Drinks
-  food("teh-tarik", "Teh tarik", "Drinks", [1, "glass"], 160, 4, 26, 5),
-  food("teh-o-ais-limau", "Teh O ais limau", "Drinks", [1, "glass"], 90, 0, 23, 0),
-  food("kopi-o", "Kopi O", "Drinks", [1, "cup"], 60, 0.5, 15, 0),
-  food("kopi-susu", "Kopi (with susu pekat)", "Drinks", [1, "cup"], 130, 3, 22, 4),
-  food("milo-ais", "Milo ais", "Drinks", [1, "glass"], 200, 5, 34, 5),
-  food("nescafe-ais", "Nescafe ais", "Drinks", [1, "glass"], 170, 3, 30, 4),
-  food("nescafe-o-ais", "Nescafe O ais", "Drinks", [1, "glass"], 70, 0.5, 17, 0),
-  food("nescafe-tarik", "Nescafe tarik", "Drinks", [1, "cup"], 150, 4, 24, 4),
-  food("neslo-ais", "Neslo ais", "Drinks", [1, "glass"], 200, 5, 33, 5),
+  // Drinks: logged as drinks (fluid, caffeine and calories), not as meals. Volume and caffeine are for a
+  // typical kopitiam glass or cup.
+  drink("air-kosong", "Air kosong (plain water)", [1, "glass"], 250, 0, 0, 0, 0, 0),
+  drink("teh-tarik", "Teh tarik", [1, "glass"], 250, 40, 160, 4, 26, 5),
+  drink("teh-ais", "Teh ais", [1, "glass"], 350, 40, 170, 4, 28, 5),
+  drink("teh-o-panas", "Teh O panas", [1, "cup"], 250, 40, 40, 0, 10, 0),
+  drink("teh-o-ais-limau", "Teh O ais limau", [1, "glass"], 350, 30, 90, 0, 23, 0),
+  drink("teh-halia", "Teh halia", [1, "cup"], 250, 40, 150, 4, 25, 4),
+  drink("kopi-o", "Kopi O", [1, "cup"], 200, 80, 60, 0.5, 15, 0),
+  drink("kopi-susu", "Kopi (with susu pekat)", [1, "cup"], 200, 80, 130, 3, 22, 4),
+  drink("kopi-ais", "Kopi ais", [1, "glass"], 350, 80, 140, 3, 23, 4),
+  drink("nescafe-ais", "Nescafe ais", [1, "glass"], 350, 65, 170, 3, 30, 4),
+  drink("nescafe-o-ais", "Nescafe O ais", [1, "glass"], 350, 65, 70, 0.5, 17, 0),
+  drink("nescafe-tarik", "Nescafe tarik", [1, "cup"], 250, 65, 150, 4, 24, 4),
   // Aiman's own: 2 tsp decaf Nescafe (about 4 g), 1 tbsp evaporated milk, 5 tbsp low-fat milk (about 75 ml).
-  food("aimans-coffee", "Aiman's Coffee (decaf)", "Drinks", [1, "cup"], 63, 4, 6.4, 2.2),
-  food("sirap-bandung", "Sirap bandung", "Drinks", [1, "glass"], 180, 3, 34, 4),
-  food("air-kelapa", "Air kelapa", "Drinks", [1, "glass"], 50, 0.5, 11, 0.5),
-  food("limau-ais", "Limau ais", "Drinks", [1, "glass"], 100, 0, 26, 0),
+  drink("aimans-coffee", "Aiman's Coffee (decaf)", [1, "cup"], 200, 6, 63, 4, 6.4, 2.2),
+  drink("milo-ais", "Milo ais", [1, "glass"], 350, 10, 200, 5, 34, 5),
+  drink("milo-panas", "Milo panas", [1, "cup"], 250, 8, 180, 5, 30, 4.5),
+  drink("neslo-ais", "Neslo ais", [1, "glass"], 350, 40, 200, 5, 33, 5),
+  drink("horlicks-ais", "Horlicks ais", [1, "glass"], 350, 0, 200, 5, 34, 5),
+  drink("sirap-bandung", "Sirap bandung", [1, "glass"], 350, 0, 180, 3, 34, 4),
+  drink("limau-ais", "Limau ais", [1, "glass"], 350, 0, 100, 0, 26, 0),
+  drink("air-kelapa", "Air kelapa", [1, "glass"], 300, 0, 50, 0.5, 11, 0.5),
+  drink("soya-bean", "Air soya", [1, "glass"], 300, 0, 130, 6, 18, 4),
+  drink("barli-ais", "Barli ais", [1, "glass"], 350, 0, 120, 1, 29, 0),
+  drink("mata-kucing", "Air mata kucing", [1, "glass"], 300, 0, 110, 0.5, 27, 0),
+  drink("cincau", "Air cincau", [1, "glass"], 350, 0, 120, 0.5, 29, 0.5),
+  drink("100plus", "100PLUS", [1, "can"], 325, 0, 85, 0, 21, 0),
+  drink("coca-cola", "Coca-Cola", [1, "can"], 320, 32, 140, 0, 35, 0),
 ];
+
+/** The meal menu: everything except drinks. */
+export const MENU_MEALS = MALAYSIAN_FOODS.filter((f) => f.group !== "Drinks");
+/** The drink menu. */
+export const MENU_DRINKS = MALAYSIAN_FOODS.filter((f) => f.group === "Drinks");

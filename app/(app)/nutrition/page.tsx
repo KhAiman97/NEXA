@@ -3,7 +3,7 @@ import { Star } from "lucide-react";
 import { getSession } from "@/lib/app/session";
 import { drinkFields, foodFields, foodLogFields, nutritionGoalFields, toOptions } from "@/lib/app/forms";
 import { addDays, day, label, longDay, num, time } from "@/lib/format";
-import { createFood, createFoodLog, createHydrationLog, deleteFood, deleteFoodLog, deleteHydrationLog, logMenuFood, saveMenuFood, saveNutritionGoal, updateFood, updateFoodLog, updateHydrationLog } from "@/lib/actions/nutrition";
+import { createFood, createFoodLog, createHydrationLog, deleteFood, deleteFoodLog, deleteHydrationLog, logMenuDrink, logMenuFood, saveMenuFood, saveNutritionGoal, updateFood, updateFoodLog, updateHydrationLog } from "@/lib/actions/nutrition";
 import { loadNutritionPage } from "@/lib/services/nutrition";
 import type { FoodLog } from "@/lib/validators/nutrition";
 import { Amount } from "@/components/app/amount";
@@ -54,7 +54,7 @@ async function NutritionContent() {
             <Figure
               className="pr-20"
               label="Energy"
-              value={<Amount value={eaten.calories} unit="kcal" />}
+              value={<Amount value={summary.energy} unit="kcal" />}
               hint={
                 goal?.calories
                   ? summary.remaining.calories! >= 0
@@ -64,7 +64,7 @@ async function NutritionContent() {
               }
             />
             <div className="absolute right-5 top-5 sm:right-6 sm:top-6">
-              <ProgressRing label="Energy against goal" value={eaten.calories} max={goal?.calories ?? eaten.calories} limit />
+              <ProgressRing label="Energy against goal" value={summary.energy} max={goal?.calories ?? summary.energy} limit />
             </div>
             <dl className="mt-6 flex flex-col gap-4">
               {macros.map((m) => (
@@ -138,9 +138,15 @@ async function NutritionContent() {
         )}
       </Section>
 
-      <Section id="drinks" title="Drinks today" aside={<EntryDialog label="Add drink" fields={drinkFields} action={createHydrationLog} />}>
+      <Section id="drinks" title="Drinks today" hint="Pick from the drink menu, or add one yourself. Drinks count toward fluid, caffeine and energy."
+        aside={
+          <>
+            <FoodCatalogueDialog mode="drinks" action={logMenuDrink} />
+            <EntryDialog label="Add drink" fields={drinkFields} action={createHydrationLog} />
+          </>
+        }>
         {drinks.length === 0 ? (
-          <Empty title="Nothing drunk yet today">Add a drink to count it toward today&apos;s fluid and caffeine.</Empty>
+          <Empty title="Nothing drunk yet today">Pick a drink from the drink menu, or add one yourself, to count it toward today&apos;s fluid, caffeine and energy.</Empty>
         ) : (
           <RowList>
             {drinks.map((d) => (
@@ -149,7 +155,7 @@ async function NutritionContent() {
                 title={label(d.beverage)}
                 meta={time(d.logged_at, timezone)}
                 value={`${num(d.volume_ml)} ml`}
-                sub={Number(d.caffeine_mg) > 0 ? `${num(Number(d.caffeine_mg))} mg caffeine` : undefined}
+                sub={[Number(d.calories ?? 0) > 0 && `${num(Number(d.calories))} kcal`, Number(d.caffeine_mg) > 0 && `${num(Number(d.caffeine_mg))} mg caffeine`].filter(Boolean).join(" · ") || undefined}
                 actions={<RowActions>
 <EntryDialog label="Edit drink" fields={drinkFields} edit={{ id: d.id, values: d }} update={updateHydrationLog} />
 <DeleteButton id={d.id} what={d.beverage} action={deleteHydrationLog} />

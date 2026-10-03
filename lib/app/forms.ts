@@ -230,7 +230,8 @@ export const drinkFields: Field[] = [
   { name: "beverage", label: "Drink", type: "text", required: true, half: true, defaultValue: "water" },
   { name: "volume_ml", label: "Volume (ml)", type: "number", required: true, half: true, step: "1", min: 1, defaultValue: 250 },
   { name: "caffeine_mg", label: "Caffeine (mg)", type: "number", half: true, step: "1", defaultValue: 0 },
-  { name: "logged_at", label: "When", type: "datetime", required: true, half: true, defaultValue: "now" },
+  { name: "calories", label: "Calories (kcal)", type: "number", half: true, step: "1", defaultValue: 0, hint: "Counted in today's energy." },
+  { name: "logged_at", label: "When", type: "datetime", required: true, defaultValue: "now" },
 ];
 
 export const foodFields: Field[] = [

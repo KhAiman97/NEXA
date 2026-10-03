@@ -2,9 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { BookOpen, Check, Search } from "lucide-react";
+import { BookOpen, Check, CupSoda, Search } from "lucide-react";
 import type { ActionResult } from "@/lib/actions/run";
-import { CATALOGUE_GROUPS, MALAYSIAN_FOODS, type CatalogueFood } from "@/lib/app/malaysian-foods";
+import { CATALOGUE_GROUPS, MENU_DRINKS, MENU_MEALS, type CatalogueFood } from "@/lib/app/malaysian-foods";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -24,13 +24,15 @@ function mealForNow(): Meal {
 /**
  * The built-in Malaysian menu. In "log" mode each dish has a button that records it as a meal now
  * (and saves it to the food library the first time). In "library" mode the button only saves it.
+ * In "drinks" mode it is the drink menu: each drink is logged as a drink (fluid, caffeine, calories).
+ * Meals and drinks never mix: the meal menu has no drinks and the drink menu has nothing else.
  */
 export function FoodCatalogueDialog({
   mode,
   savedNames = [],
   action,
 }: {
-  mode: "log" | "library";
+  mode: "log" | "library" | "drinks";
   /** Names already in the user's food library, shown as saved. */
   savedNames?: string[];
   action: (input: unknown) => Promise<ActionResult<unknown>>;
@@ -47,9 +49,10 @@ export function FoodCatalogueDialog({
 
   const groups = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const matches = q ? MALAYSIAN_FOODS.filter((f) => f.name.toLowerCase().includes(q) || f.group.toLowerCase().includes(q)) : MALAYSIAN_FOODS;
+    const menu = mode === "drinks" ? MENU_DRINKS : MENU_MEALS;
+    const matches = q ? menu.filter((f) => f.name.toLowerCase().includes(q) || f.group.toLowerCase().includes(q)) : menu;
     return CATALOGUE_GROUPS.map((group) => ({ group, foods: matches.filter((f) => f.group === group) })).filter((g) => g.foods.length > 0);
-  }, [query]);
+  }, [query, mode]);
 
   const onOpenChange = (next: boolean) => {
     if (next) {
@@ -79,15 +82,16 @@ export function FoodCatalogueDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="h-9 px-3 text-sm">
-          <BookOpen aria-hidden /> Malaysian menu
+          {mode === "drinks" ? <CupSoda aria-hidden /> : <BookOpen aria-hidden />} {mode === "drinks" ? "Drink menu" : "Malaysian menu"}
         </Button>
       </DialogTrigger>
       <DialogContent className="flex max-h-[92svh] w-[calc(100%-1.5rem)] max-w-xl flex-col gap-0 rounded-2xl bg-sheet p-0 sm:rounded-2xl">
         <DialogHeader className="shrink-0 px-6 pb-4 pr-12 pt-6 text-left">
-          <DialogTitle className="font-display text-xl">Malaysian menu</DialogTitle>
+          <DialogTitle className="font-display text-xl">{mode === "drinks" ? "Drink menu" : "Malaysian menu"}</DialogTitle>
           <DialogDescription>
-            {mode === "log" ? "Pick a dish to add it to today's meals." : "Pick dishes to save to your food library."} Figures are typical for one serving; portions vary by stall, so edit a
-            food if yours differs.
+            {mode === "drinks"
+              ? "Pick a drink to add it to today's drinks: it counts toward fluid, caffeine and energy. Figures are for a typical kopitiam glass; edit the entry if yours differs."
+              : `${mode === "log" ? "Pick a dish to add it to today's meals." : "Pick dishes to save to your food library."} Figures are typical for one serving; portions vary by stall, so edit a food if yours differs.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -98,8 +102,8 @@ export function FoodCatalogueDialog({
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search dishes, e.g. nasi lemak"
-              aria-label="Search dishes"
+              placeholder={mode === "drinks" ? "Search drinks, e.g. teh tarik" : "Search dishes, e.g. nasi lemak"}
+              aria-label={mode === "drinks" ? "Search drinks" : "Search dishes"}
               className="h-10 w-full rounded-lg border border-input bg-card pl-9 pr-3 text-base placeholder:text-muted-foreground focus-visible:border-ring md:text-sm"
             />
           </div>
@@ -122,7 +126,11 @@ export function FoodCatalogueDialog({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto border-t px-6 pb-5">
-          {groups.length === 0 && <p className="py-10 text-center text-sm text-muted-foreground">No dish matches &ldquo;{query.trim()}&rdquo;. Use Add meal to type one in yourself.</p>}
+          {groups.length === 0 && (
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              Nothing matches &ldquo;{query.trim()}&rdquo;. Use {mode === "drinks" ? "Add drink" : "Add meal"} to type one in yourself.
+            </p>
+          )}
           {groups.map(({ group, foods }) => (
             <section key={group} aria-label={group}>
               <h3 className="eyebrow sticky top-0 z-10 -mx-6 bg-sheet px-6 pb-2 pt-4 text-muted-foreground">{group}</h3>
@@ -134,8 +142,10 @@ export function FoodCatalogueDialog({
                     <li key={item.key} className="flex items-center gap-3 border-b py-2.5 last:border-b-0">
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-medium">{item.name}</p>
-                        <p className="figure truncate text-xs text-muted-foreground">
-                          {item.calories} kcal · P {item.protein_g} · C {item.carbs_g} · F {item.fat_g} g · {item.serving_size} {item.serving_unit}
+                        <p className="figure line-clamp-2 text-xs text-muted-foreground">
+                          {mode === "drinks"
+                            ? `${item.volume_ml ?? 250} ml · ${item.calories} kcal${item.caffeine_mg ? ` · ${item.caffeine_mg} mg caffeine` : ""}`
+                            : `${item.calories} kcal · P ${item.protein_g} · C ${item.carbs_g} · F ${item.fat_g} g · ${item.serving_size} ${item.serving_unit}`}
                         </p>
                       </div>
                       {isSaved ? (
@@ -144,7 +154,7 @@ export function FoodCatalogueDialog({
                         </span>
                       ) : (
                         <Button type="button" size="sm" variant={count > 0 ? "outline" : "secondary"} disabled={busy !== null} onClick={() => run(item)} className="h-8 shrink-0">
-                          {busy === item.key ? "Saving…" : mode === "library" ? "Save" : count > 0 ? `Logged ×${count}` : "Log meal"}
+                          {busy === item.key ? "Saving…" : mode === "library" ? "Save" : count > 0 ? `Logged ×${count}` : mode === "drinks" ? "Log drink" : "Log meal"}
                         </Button>
                       )}
                     </li>
