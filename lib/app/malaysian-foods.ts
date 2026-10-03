@@ -69,6 +69,8 @@ export const MALAYSIAN_FOODS: CatalogueFood[] = [
   food("nasi-goreng-cili-padi", "Nasi goreng cili padi", "Masakan panas", [1, "plate"], 630, 20, 90, 21),
   food("nasi-goreng-belacan", "Nasi goreng belacan", "Masakan panas", [1, "plate"], 640, 20, 90, 22),
   food("nasi-goreng-seafood", "Nasi goreng seafood", "Masakan panas", [1, "plate"], 660, 28, 89, 21),
+  food("nasi-goreng-sotong", "Nasi goreng sotong", "Masakan panas", [1, "plate"], 650, 26, 89, 21),
+  food("nasi-goreng-udang", "Nasi goreng udang", "Masakan panas", [1, "plate"], 650, 27, 89, 21),
   food("nasi-goreng-paprik", "Nasi goreng paprik", "Masakan panas", [1, "plate"], 760, 30, 94, 29),
   food("nasi-goreng-mamak", "Nasi goreng mamak", "Masakan panas", [1, "plate"], 660, 20, 92, 23),
   food("nasi-paprik-ayam", "Nasi paprik ayam", "Masakan panas", [1, "plate"], 700, 30, 86, 26),
