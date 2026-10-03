@@ -187,6 +187,8 @@ export const MALAYSIAN_FOODS: CatalogueFood[] = [
   food("nescafe-o-ais", "Nescafe O ais", "Drinks", [1, "glass"], 70, 0.5, 17, 0),
   food("nescafe-tarik", "Nescafe tarik", "Drinks", [1, "cup"], 150, 4, 24, 4),
   food("neslo-ais", "Neslo ais", "Drinks", [1, "glass"], 200, 5, 33, 5),
+  // Aiman's own: 2 tsp decaf Nescafe (about 4 g), 1 tbsp evaporated milk, 5 tbsp low-fat milk (about 75 ml).
+  food("aimans-coffee", "Aiman's Coffee (decaf)", "Drinks", [1, "cup"], 63, 4, 6.4, 2.2),
   food("sirap-bandung", "Sirap bandung", "Drinks", [1, "glass"], 180, 3, 34, 4),
   food("air-kelapa", "Air kelapa", "Drinks", [1, "glass"], 50, 0.5, 11, 0.5),
   food("limau-ais", "Limau ais", "Drinks", [1, "glass"], 100, 0, 26, 0),

@@ -59,7 +59,7 @@ check("menu: every dish belongs to a listed group", MALAYSIAN_FOODS.every((f) =>
 // Calories should be roughly 4 kcal per gram of protein and carbohydrate and 9 per gram of fat.
 const off = MALAYSIAN_FOODS.filter((f) => f.calories >= 100 && Math.abs(f.calories - (4 * f.protein_g + 4 * f.carbs_g + 9 * f.fat_g)) / f.calories > 0.15).map((f) => f.name);
 check("menu: calories agree with the macros within 15%", off.length === 0, off.join(", "));
-check("menu: the bakar dishes and Nescafe are there", ["nasi-lemak-bakar", "ayam-bakar", "daging-bakar", "lemak-bakar", "nasi-kerabu-daging-bakar", "nasi-kerabu-lemak-bakar", "nescafe-ais"].every((k) => MALAYSIAN_FOODS.some((f) => f.key === k)));
+check("menu: the bakar dishes and Nescafe are there", ["nasi-lemak-bakar", "ayam-bakar", "daging-bakar", "lemak-bakar", "nasi-kerabu-daging-bakar", "nasi-kerabu-lemak-bakar", "nescafe-ais", "aimans-coffee"].every((k) => MALAYSIAN_FOODS.some((f) => f.key === k)));
 check("menu: the masakan panas dishes are there", ["nasi-goreng-kampung", "nasi-goreng-daging-merah", "telur-mata", "paprik-ayam", "kuey-teow-kungfu", "tomyam-seafood"].every((k) => MALAYSIAN_FOODS.some((f) => f.key === k && f.group === "Masakan panas")));
 
 console.log(failed ? `\n${failed} FAILED` : "\nall passed");
