@@ -5,7 +5,7 @@
  * a lot (rice quantity, oil, gravy), so treat them as estimates and edit a food after saving it if
  * yours differs.
  */
-export type CatalogueGroup = "Rice" | "Masakan panas" | "Noodles" | "Western" | "Roti and breads" | "Sides and protein" | "Vegetables" | "Soups and porridge" | "Kuih and dessert" | "Drinks";
+export type CatalogueGroup = "My dishes" | "Rice" | "Masakan panas" | "Noodles" | "Western" | "Roti and breads" | "Sides and protein" | "High protein" | "Vegetables" | "Soups and porridge" | "Kuih and dessert" | "Drinks";
 
 export type CatalogueFood = {
   /** Stable id used by the server actions. */
@@ -18,6 +18,8 @@ export type CatalogueFood = {
   protein_g: number;
   carbs_g: number;
   fat_g: number;
+  /** Set only on dishes the user added themselves (their food library), never on the built-in menu. */
+  foodId?: string;
   /** Drinks only: one glass or cup, so logging it counts toward fluid and caffeine. */
   volume_ml?: number;
   caffeine_mg?: number;
@@ -42,7 +44,7 @@ const drink = (key: string, name: string, serving: [number, string], volume_ml: 
   caffeine_mg,
 });
 
-export const CATALOGUE_GROUPS: CatalogueGroup[] = ["Rice", "Masakan panas", "Noodles", "Western", "Roti and breads", "Sides and protein", "Vegetables", "Soups and porridge", "Kuih and dessert", "Drinks"];
+export const CATALOGUE_GROUPS: CatalogueGroup[] = ["Rice", "Masakan panas", "Noodles", "Western", "Roti and breads", "Sides and protein", "High protein", "Vegetables", "Soups and porridge", "Kuih and dessert", "Drinks"];
 
 export const MALAYSIAN_FOODS: CatalogueFood[] = [
   // Rice
@@ -51,6 +53,7 @@ export const MALAYSIAN_FOODS: CatalogueFood[] = [
   food("nasi-lemak-rendang", "Nasi lemak rendang daging", "Rice", [1, "plate"], 760, 30, 84, 33),
   food("nasi-lemak-bakar", "Nasi lemak bakar", "Rice", [1, "wrap"], 520, 14, 78, 17),
   food("nasi-ayam-bakar", "Nasi ayam bakar", "Rice", [1, "plate"], 720, 34, 84, 26),
+  food("nasi-ayam-penyet", "Nasi ayam penyet", "Rice", [1, "plate"], 850, 38, 90, 37),
   food("nasi-daging-bakar", "Nasi daging bakar", "Rice", [1, "plate"], 740, 36, 86, 27),
   food("nasi-ayam", "Nasi ayam (roasted)", "Rice", [1, "plate"], 610, 25, 75, 23),
   food("nasi-ayam-kukus", "Nasi ayam (steamed)", "Rice", [1, "plate"], 560, 26, 74, 17),
@@ -187,6 +190,9 @@ export const MALAYSIAN_FOODS: CatalogueFood[] = [
 
   // Sides and protein
   food("ayam-goreng", "Ayam goreng", "Sides and protein", [1, "piece"], 290, 22, 8, 19),
+  food("ayam-goreng-tepung", "Ayam goreng tepung", "Sides and protein", [1, "piece"], 380, 26, 16, 24),
+  food("ayam-goreng-berempah", "Ayam goreng berempah", "Sides and protein", [1, "piece"], 330, 25, 8, 22),
+  food("ayam-penyet", "Ayam penyet (with sambal)", "Sides and protein", [1, "piece"], 520, 32, 10, 39),
   food("ayam-masak-merah", "Ayam masak merah", "Sides and protein", [1, "piece"], 280, 22, 9, 17),
   food("kari-ayam", "Kari ayam", "Sides and protein", [1, "serving"], 300, 21, 8, 21),
   food("rendang-daging", "Rendang daging", "Sides and protein", [100, "g"], 250, 20, 6, 16),
@@ -201,6 +207,20 @@ export const MALAYSIAN_FOODS: CatalogueFood[] = [
   food("sayur-campur", "Sayur campur goreng", "Sides and protein", [1, "serving"], 110, 3, 10, 7),
   food("kangkung-belacan", "Kangkung belacan", "Sides and protein", [1, "serving"], 130, 4, 8, 9),
   food("tempe-goreng", "Tempe goreng", "Sides and protein", [3, "pieces"], 190, 12, 9, 12),
+
+  // High protein: for days the protein goal needs help. Shakes are logged here as food, for their protein.
+  food("protein-bar", "Protein bar", "High protein", [1, "bar"], 220, 20, 22, 7),
+  food("whey-water", "Whey protein shake (with water)", "High protein", [1, "scoop"], 120, 24, 3, 1.5),
+  food("whey-milk", "Whey protein shake (with low-fat milk)", "High protein", [1, "glass"], 230, 32, 15, 5),
+  food("chicken-breast", "Dada ayam (grilled chicken breast, plain)", "High protein", [150, "g"], 250, 46, 0, 6),
+  food("boiled-eggs", "Telur rebus", "High protein", [2, "eggs"], 155, 13, 1, 11),
+  food("egg-whites", "Putih telur (egg whites)", "High protein", [4, "eggs"], 70, 14, 1, 0.2),
+  food("greek-yogurt", "Greek yogurt (plain)", "High protein", [170, "g"], 100, 17, 6, 0.7),
+  food("tuna-can", "Tuna in water", "High protein", [1, "can"], 130, 29, 0, 1),
+  food("sardin-can", "Sardin (canned, tomato sauce)", "High protein", [1, "can"], 260, 25, 4, 16),
+  food("tauhu", "Tauhu (firm tofu)", "High protein", [150, "g"], 215, 23, 5, 12),
+  food("ikan-kembung-rebus", "Ikan kembung (steamed)", "High protein", [1, "fish"], 180, 28, 0, 7),
+  food("beef-lean", "Daging lembu (lean, grilled)", "High protein", [150, "g"], 300, 45, 0, 13),
 
   // Vegetables: plain, raw or steamed/boiled with no oil (the stir-fried ones are under Sides and Masakan panas).
   food("salad-leaves", "Mixed salad leaves", "Vegetables", [1, "bowl"], 10, 0.7, 1.5, 0.1),

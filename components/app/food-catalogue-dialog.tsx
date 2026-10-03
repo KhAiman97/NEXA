@@ -1,5 +1,7 @@
 "use client";
 
+import type React from "react";
+
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { BookOpen, Check, CupSoda, Search } from "lucide-react";
@@ -31,8 +33,17 @@ export function FoodCatalogueDialog({
   mode,
   savedNames = [],
   action,
+  myFoods = [],
+  logSaved,
+  addOwn,
 }: {
   mode: "log" | "library" | "drinks";
+  /** Log mode: the user's own dishes, listed first as "My dishes". */
+  myFoods?: CatalogueFood[];
+  /** Log mode: logs one of the user's own dishes ({ food_id, meal_type }). */
+  logSaved?: (input: unknown) => Promise<ActionResult<unknown>>;
+  /** A button to add a dish of your own (an EntryDialog), shown at the top of the menu. */
+  addOwn?: React.ReactNode;
   /** Names already in the user's food library, shown as saved. */
   savedNames?: string[];
   action: (input: unknown) => Promise<ActionResult<unknown>>;
@@ -49,10 +60,12 @@ export function FoodCatalogueDialog({
 
   const groups = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const menu = mode === "drinks" ? MENU_DRINKS : MENU_MEALS;
+    const mine = mode === "log" ? myFoods : [];
+    const menu = mode === "drinks" ? MENU_DRINKS : [...mine, ...MENU_MEALS];
     const matches = q ? menu.filter((f) => f.name.toLowerCase().includes(q) || f.group.toLowerCase().includes(q)) : menu;
-    return CATALOGUE_GROUPS.map((group) => ({ group, foods: matches.filter((f) => f.group === group) })).filter((g) => g.foods.length > 0);
-  }, [query, mode]);
+    const groups: CatalogueFood["group"][] = mine.length > 0 ? ["My dishes", ...CATALOGUE_GROUPS] : CATALOGUE_GROUPS;
+    return groups.map((group) => ({ group, foods: matches.filter((f) => f.group === group) })).filter((g) => g.foods.length > 0);
+  }, [query, mode, myFoods]);
 
   const onOpenChange = (next: boolean) => {
     if (next) {
@@ -68,7 +81,10 @@ export function FoodCatalogueDialog({
     setBusy(item.key);
     setError(null);
     startTransition(async () => {
-      const result = await action(mode === "log" ? { key: item.key, meal_type: meal } : { key: item.key });
+      const result =
+        item.foodId && logSaved
+          ? await logSaved({ food_id: item.foodId, meal_type: meal })
+          : await action(mode === "log" ? { key: item.key, meal_type: meal } : { key: item.key });
       setBusy(null);
       if (result.error) setError(`${item.name}: ${result.error.message}`);
       else {
@@ -96,6 +112,7 @@ export function FoodCatalogueDialog({
         </DialogHeader>
 
         <div className="flex shrink-0 flex-col gap-3 px-6 pb-4">
+          {addOwn && <div className="flex justify-end">{addOwn}</div>}
           <div className="relative">
             <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <input

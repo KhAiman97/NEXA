@@ -1,10 +1,13 @@
 import { Suspense } from "react";
-import { Star } from "lucide-react";
+import { CircleCheck, Lightbulb, Star, TriangleAlert } from "lucide-react";
 import { getSession } from "@/lib/app/session";
 import { drinkFields, foodFields, foodLogFields, nutritionGoalFields, toOptions } from "@/lib/app/forms";
 import { addDays, day, label, longDay, num, time } from "@/lib/format";
 import { createFood, createFoodLog, createHydrationLog, deleteFood, deleteFoodLog, deleteHydrationLog, logMenuDrink, logMenuFood, saveMenuFood, saveNutritionGoal, updateFood, updateFoodLog, updateHydrationLog } from "@/lib/actions/nutrition";
 import { loadNutritionPage } from "@/lib/services/nutrition";
+import { MENU_MEALS, type CatalogueFood } from "@/lib/app/malaysian-foods";
+import { nutritionTips } from "@/lib/app/nutrition-tips";
+import { cn } from "@/lib/utils";
 import type { FoodLog } from "@/lib/validators/nutrition";
 import { Amount } from "@/components/app/amount";
 import { GoalBarChart } from "@/components/app/charts";
@@ -16,6 +19,11 @@ import { ModuleTabs } from "@/components/app/module-tabs";
 import { RowActions, Empty, Figure, Meter, ModulePage, ProgressRing, Panel, Row, RowList, Section, Table, Td } from "@/components/app/ui";
 
 export const metadata = { title: "Nutrition" };
+
+/** The current hour (0 to 23) in a timezone: suggestions are firmer later in the day. */
+function hourIn(timeZone: string): number {
+  return Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hourCycle: "h23", timeZone }).format(new Date()));
+}
 
 const MEALS: FoodLog["meal_type"][] = ["breakfast", "lunch", "dinner", "snack"];
 const TREND_DAYS = 14;
@@ -43,6 +51,32 @@ async function NutritionContent() {
     { name: "Carbs", value: summary.macros.carbs_g, target: goal?.carbs_g },
     { name: "Fat", value: summary.macros.fat_g, target: goal?.fat_g },
   ];
+  // The user's own saved foods appear in the Malaysian menu as "My dishes". Copies of menu dishes (saved
+  // from the menu itself) are left out so a dish is not listed twice.
+  const menuNames = new Set(MENU_MEALS.map((f) => f.name.toLowerCase()));
+  const myDishes: CatalogueFood[] = foodRows
+    .filter((f) => !menuNames.has(f.name.toLowerCase()))
+    .map((f) => ({
+      key: `mine-${f.id}`,
+      foodId: f.id,
+      name: f.name,
+      group: "My dishes",
+      serving_size: Number(f.serving_size),
+      serving_unit: f.serving_unit,
+      calories: Number(f.calories),
+      protein_g: Number(f.protein_g),
+      carbs_g: Number(f.carbs_g),
+      fat_g: Number(f.fat_g),
+    }));
+  const tips = nutritionTips({
+    energy: summary.energy,
+    macros: summary.macros,
+    goal,
+    water_ml: drunk.total_volume_ml,
+    caffeine_mg: drunk.total_caffeine_mg,
+    hour: hourIn(timezone),
+  });
+
   const meals = [...summary.foodLogs].sort((a, b) => MEALS.indexOf(a.meal_type) - MEALS.indexOf(b.meal_type) || a.logged_at.localeCompare(b.logged_at));
   const drinks = [...summary.drinks].sort((a, b) => a.logged_at.localeCompare(b.logged_at));
 
@@ -110,10 +144,43 @@ async function NutritionContent() {
         </div>
       </Section>
 
+      <Section id="suggestions" title="Suggestions" hint="From what you have eaten and drunk today, against your goals.">
+        <ul className="grid gap-3 lg:grid-cols-2">
+          {tips.map((tip) => {
+            const Icon = tip.tone === "warn" ? TriangleAlert : tip.tone === "pos" ? CircleCheck : Lightbulb;
+            return (
+              <li key={tip.title} className="rounded-xl border bg-card p-4">
+                <p className={cn("flex items-start gap-2 font-medium", tip.tone === "warn" && "text-neg", tip.tone === "pos" && "text-pos")}>
+                  <Icon aria-hidden className="mt-0.5 size-4 shrink-0" />
+                  {tip.title}
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">{tip.detail}</p>
+                {tip.picks && tip.picks.length > 0 && (
+                  <ul className="mt-3 flex flex-wrap gap-2">
+                    {tip.picks.map((pick) => (
+                      <li key={pick.name} className="rounded-lg border bg-muted/50 px-2.5 py-1 text-sm">
+                        <span className="font-medium">{pick.name}</span>
+                        <span className="figure ml-1.5 text-xs text-muted-foreground">{pick.note}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </Section>
+
       <Section id="meals" title="Meals today" hint="Pick from the Malaysian menu if you do not know the calories and macros of a dish."
         aside={
           <>
-            <FoodCatalogueDialog mode="log" action={logMenuFood} />
+            <FoodCatalogueDialog
+              mode="log"
+              action={logMenuFood}
+              myFoods={myDishes}
+              logSaved={createFoodLog}
+              addOwn={<EntryDialog label="Add your own dish" variant="outline" fields={foodFields} action={createFood} />}
+            />
             <EntryDialog label="Add meal" fields={foodLogFields(toOptions(foodRows))} action={createFoodLog} />
           </>
         }>

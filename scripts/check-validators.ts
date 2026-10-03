@@ -4,6 +4,7 @@ import { accountInput, transactionInput, monthlyGoalInput } from "../lib/validat
 import { projectInput } from "../lib/validators/projects";
 import { fillAmounts, fuelLogInput } from "../lib/validators/vehicles";
 import { CATALOGUE_GROUPS, MALAYSIAN_FOODS, MENU_DRINKS, MENU_MEALS } from "../lib/app/malaysian-foods";
+import { nutritionTips } from "../lib/app/nutrition-tips";
 
 let failed = 0;
 const check = (name: string, ok: boolean, detail?: unknown) => {
@@ -64,6 +65,19 @@ check("menu: the western dishes are there", ["pasta-bolognese", "meatballs", "ro
 check("menu: vegetables are there", ["salad-leaves", "lettuce", "broccoli", "cucumber"].every((k) => MALAYSIAN_FOODS.some((f) => f.key === k && f.group === "Vegetables")));
 check("menu: every drink has a volume and caffeine, and only drinks do", MENU_DRINKS.length > 0 && MENU_DRINKS.every((d) => d.volume_ml! > 0 && d.caffeine_mg != null) && MENU_MEALS.every((f) => f.volume_ml == null && f.group !== "Drinks"));
 check("menu: meals and drinks together are the whole menu", MENU_MEALS.length + MENU_DRINKS.length === MALAYSIAN_FOODS.length && MENU_DRINKS.some((d) => d.key === "aimans-coffee"));
+check("menu: protein foods are there", ["protein-bar", "ayam-goreng-tepung", "ayam-goreng", "chicken-breast", "whey-water"].every((k) => MALAYSIAN_FOODS.some((f) => f.key === k)) && !MALAYSIAN_FOODS.some((f) => f.group === "My dishes"));
+
+// 7. Suggestions
+const goal = { calories: 2200, protein_g: 140, carbs_g: 250, fat_g: 70, water_ml: 2500, caffeine_limit_mg: 400 };
+const base = { energy: 1500, macros: { protein_g: 60, carbs_g: 180, fat_g: 50 }, goal, water_ml: 2500, caffeine_mg: 100, hour: 13 };
+const lowProtein = nutritionTips(base);
+const proteinTip = lowProtein.find((t) => t.title.startsWith("Take more protein"));
+check("tips: short on protein names how much and lean dishes that fit", proteinTip?.title === "Take more protein: 80 g to go" && proteinTip.picks!.length === 4 && proteinTip.picks!.every((p) => MALAYSIAN_FOODS.find((f) => f.name === p.name)!.calories <= 700), proteinTip);
+check("tips: the leanest protein comes first", proteinTip?.picks?.[0]?.name !== undefined && ["Putih telur (egg whites)", "Tuna in water", "Whey protein shake (with water)"].includes(proteinTip!.picks![0].name), proteinTip?.picks);
+const over = nutritionTips({ ...base, energy: 2400, macros: { protein_g: 150, carbs_g: 300, fat_g: 90 }, water_ml: 1000, caffeine_mg: 420, hour: 20 });
+check("tips: over energy, fat, carbs, caffeine and short on water are all flagged, warnings first", ["Over your energy goal by 200 kcal", "Fat is over your goal by 20 g", "Carbs are over your goal by 50 g", "Caffeine limit reached", "Drink 1500 ml more water"].every((t) => over.some((x) => x.title === t)) && over[0].tone === "warn" && over.some((t) => t.title === "Protein goal reached"), over.map((t) => t.title));
+check("tips: on track says so", nutritionTips({ ...base, macros: { protein_g: 140, carbs_g: 200, fat_g: 60 } }).some((t) => t.title === "On track today"));
+check("tips: no goal asks for one", nutritionTips({ ...base, goal: null })[0].title === "Set your daily goals");
 check("menu: the masakan panas dishes are there", ["nasi-goreng-kampung", "nasi-goreng-daging-merah", "nasi-goreng-sotong", "nasi-goreng-udang", "telur-mata", "paprik-ayam", "kuey-teow-kungfu", "tomyam-seafood"].every((k) => MALAYSIAN_FOODS.some((f) => f.key === k && f.group === "Masakan panas")));
 
 console.log(failed ? `\n${failed} FAILED` : "\nall passed");
