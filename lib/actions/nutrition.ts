@@ -43,7 +43,7 @@ async function ensureMenuFood(db: Db, key: string) {
 
 export async function saveMenuFood(input: unknown) { return run(({ db }) => ensureMenuFood(db, parse(menuItem, input).key), N); }
 
-/** Log one glass or cup of a menu drink now, as a drink: fluid, caffeine and calories. */
+/** Log one glass or cup of a menu drink now, as a drink: fluid, caffeine, calories and macros. */
 export async function logMenuDrink(input: unknown) {
   return run(({ db }) => {
     const { key } = parse(menuItem, input);
@@ -51,7 +51,15 @@ export async function logMenuDrink(input: unknown) {
     if (!item) throw new ServiceError("not_found", "That drink is not on the menu.");
     return hydrationLogs.create(
       db,
-      parse(hydrationInput, { beverage: item.name, volume_ml: item.volume_ml ?? 250, caffeine_mg: item.caffeine_mg ?? 0, calories: item.calories }),
+      parse(hydrationInput, {
+        beverage: item.name,
+        volume_ml: item.volume_ml ?? 250,
+        caffeine_mg: item.caffeine_mg ?? 0,
+        calories: item.calories,
+        protein_g: item.protein_g,
+        carbs_g: item.carbs_g,
+        fat_g: item.fat_g,
+      }),
     );
   }, [...N, "/dashboard"]);
 }

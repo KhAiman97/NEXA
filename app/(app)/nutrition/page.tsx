@@ -31,7 +31,6 @@ async function NutritionContent() {
   const { summary, trend, foods: foodRows } = await loadNutritionPage(db, today, timezone, addDays(today, -(TREND_DAYS - 1)));
 
   const goal = summary.goal;
-  const eaten = summary.nutrition ?? { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0, entries: 0 };
   const drunk = summary.hydration ?? { total_volume_ml: 0, total_caffeine_mg: 0, drinks: 0 };
   const volumeByDay = new Map(trend.map((t) => [t.day.slice(0, 10), Number(t.total_volume_ml)]));
   const trendData = Array.from({ length: TREND_DAYS }, (_, i) => {
@@ -39,9 +38,10 @@ async function NutritionContent() {
     return { day: day(d), value: volumeByDay.get(d) ?? 0 };
   });
   const macros = [
-    { name: "Protein", value: eaten.protein_g, target: goal?.protein_g },
-    { name: "Carbs", value: eaten.carbs_g, target: goal?.carbs_g },
-    { name: "Fat", value: eaten.fat_g, target: goal?.fat_g },
+    // Meals and drinks together, like the energy figure above them.
+    { name: "Protein", value: summary.macros.protein_g, target: goal?.protein_g },
+    { name: "Carbs", value: summary.macros.carbs_g, target: goal?.carbs_g },
+    { name: "Fat", value: summary.macros.fat_g, target: goal?.fat_g },
   ];
   const meals = [...summary.foodLogs].sort((a, b) => MEALS.indexOf(a.meal_type) - MEALS.indexOf(b.meal_type) || a.logged_at.localeCompare(b.logged_at));
   const drinks = [...summary.drinks].sort((a, b) => a.logged_at.localeCompare(b.logged_at));

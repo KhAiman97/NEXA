@@ -89,7 +89,7 @@ async function main() {
       insert into inventory_items (name, quantity, reorder_level) values ('Resistors', 1, 5), ('Wire', 9, 5);
       insert into foods (name, calories) values ('Nasi lemak', 644);
       insert into food_logs (name, meal_type, servings, calories, protein_g, carbs_g, fat_g, logged_at) values ('Nasi lemak', 'breakfast', 1, 644, 18, 80, 27, '2031-05-04T08:00:00+08');
-      insert into hydration_logs (beverage, volume_ml, caffeine_mg, calories, logged_at) values ('water', 500, 0, 0, '2031-05-04T09:00:00+08'), ('Teh tarik', 250, 40, 160, '2031-05-04T10:00:00+08'), ('kopi', 250, 95, 0, '2031-05-03T09:00:00+08');
+      insert into hydration_logs (beverage, volume_ml, caffeine_mg, calories, protein_g, carbs_g, fat_g, logged_at) values ('water', 500, 0, 0, 0, 0, 0, '2031-05-04T09:00:00+08'), ('Teh tarik', 250, 40, 160, 4, 26, 5, '2031-05-04T10:00:00+08'), ('kopi', 250, 95, 0, 0, 0, 0, '2031-05-03T09:00:00+08');
       insert into nutrition_goals (calories, water_ml, caffeine_limit_mg) values (2000, 2500, 400);
       insert into workouts (title, performed_at, duration_min) values ('Run', '2031-05-02T07:00:00+08', 30);
       insert into exercise_goals (id, name, unit, daily_target) values ('44444444-4444-4444-4444-444444444444', 'Push-ups', 'reps', 20);
@@ -141,6 +141,7 @@ async function main() {
   check("dashboard: finance and subscriptions", dashboard.overview.income === 84 && dashboard.overview.expense === 296 && dashboard.subscriptions.monthlyTotal === 55 && dashboard.subscriptions.yearlyTotal === 660, dashboard.subscriptions);
   check("dashboard: low stock only", dashboard.lowStock.length === 1 && dashboard.lowStock[0].name === "Resistors", dashboard.lowStock);
   check("dashboard: today's food and water against the goal", dashboard.day.nutrition?.calories === 644 && dashboard.day.hydration?.total_volume_ml === 750 && dashboard.day.remaining.water_ml === 1750 && dashboard.day.goal?.water_ml === 2500, dashboard.day);
+  check("dashboard: protein, carbs and fat count drinks as well as meals", dashboard.day.macros.protein_g === 22 && dashboard.day.macros.carbs_g === 106 && dashboard.day.macros.fat_g === 32, dashboard.day.macros);
   check("dashboard: energy counts drinks as well as meals", dashboard.day.energy === 804 && dashboard.day.remaining.calories === 1196 && dashboard.day.hydration?.total_calories === 160, [dashboard.day.energy, dashboard.day.remaining]);
   check("dashboard: week's workouts, upcoming booking, goals", dashboard.recentWorkouts.length === 1 && dashboard.upcoming.length === 1 && dashboard.goals.length === 1 && Number(dashboard.goalTotals[0]?.total) === 10 && dashboard.runningCosts.length === 1 && dashboard.projectCosts.length === 1, [dashboard.recentWorkouts.length, dashboard.upcoming.length, dashboard.goalTotals]);
 
