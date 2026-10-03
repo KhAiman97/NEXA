@@ -5,7 +5,7 @@
  * a lot (rice quantity, oil, gravy), so treat them as estimates and edit a food after saving it if
  * yours differs.
  */
-export type CatalogueGroup = "Rice" | "Masakan panas" | "Noodles" | "Roti and breads" | "Sides and protein" | "Soups and porridge" | "Kuih and dessert" | "Drinks";
+export type CatalogueGroup = "Rice" | "Masakan panas" | "Noodles" | "Western" | "Roti and breads" | "Sides and protein" | "Soups and porridge" | "Kuih and dessert" | "Drinks";
 
 export type CatalogueFood = {
   /** Stable id used by the server actions. */
@@ -32,7 +32,7 @@ const food = (key: string, name: string, group: CatalogueGroup, serving: [number
   fat_g,
 });
 
-export const CATALOGUE_GROUPS: CatalogueGroup[] = ["Rice", "Masakan panas", "Noodles", "Roti and breads", "Sides and protein", "Soups and porridge", "Kuih and dessert", "Drinks"];
+export const CATALOGUE_GROUPS: CatalogueGroup[] = ["Rice", "Masakan panas", "Noodles", "Western", "Roti and breads", "Sides and protein", "Soups and porridge", "Kuih and dessert", "Drinks"];
 
 export const MALAYSIAN_FOODS: CatalogueFood[] = [
   // Rice
@@ -136,6 +136,34 @@ export const MALAYSIAN_FOODS: CatalogueFood[] = [
   food("pan-mee", "Pan mee sup", "Noodles", [1, "bowl"], 480, 22, 62, 15),
   food("hokkien-mee", "Hokkien mee (KL style)", "Noodles", [1, "plate"], 620, 22, 70, 28),
 
+  // Western: kopitiam and cafe plates. Mains come with their usual sides; the sides are also listed alone.
+  food("chicken-chop", "Chicken chop (black pepper, fries, coleslaw)", "Western", [1, "plate"], 950, 45, 70, 55),
+  food("grilled-chicken-plate", "Grilled chicken with fries and coleslaw", "Western", [1, "plate"], 780, 42, 62, 40),
+  food("grilled-chicken", "Grilled chicken", "Western", [1, "piece"], 280, 32, 3, 15),
+  food("roasted-chicken", "Roasted chicken (quarter)", "Western", [1, "quarter"], 330, 30, 2, 22),
+  food("lamb-chop", "Lamb chop (with sides)", "Western", [1, "plate"], 900, 40, 55, 58),
+  food("beef-steak", "Beef steak (sirloin)", "Western", [200, "g"], 520, 46, 6, 34),
+  food("fish-and-chips", "Fish and chips", "Western", [1, "plate"], 850, 32, 80, 44),
+  food("grilled-fish-fillet", "Grilled fish fillet", "Western", [1, "fillet"], 250, 30, 4, 12),
+  food("pasta-bolognese", "Pasta bolognese", "Western", [1, "plate"], 650, 28, 82, 22),
+  food("spaghetti-carbonara", "Spaghetti carbonara", "Western", [1, "plate"], 780, 26, 80, 39),
+  food("spaghetti-aglio-olio", "Spaghetti aglio olio (chicken)", "Western", [1, "plate"], 600, 22, 76, 23),
+  food("lasagna", "Lasagna", "Western", [1, "portion"], 600, 30, 45, 33),
+  food("mac-and-cheese", "Mac and cheese", "Western", [1, "bowl"], 560, 22, 58, 27),
+  food("beef-burger", "Beef burger", "Western", [1, "burger"], 550, 28, 42, 30),
+  food("chicken-burger", "Chicken burger", "Western", [1, "burger"], 480, 24, 45, 22),
+  food("club-sandwich", "Club sandwich", "Western", [1, "sandwich"], 600, 30, 50, 30),
+  food("pizza-pepperoni", "Pepperoni pizza", "Western", [2, "slices"], 600, 24, 64, 27),
+  food("meatballs", "Meatballs", "Western", [3, "pieces"], 240, 14, 6, 18),
+  food("sausages", "Sausages", "Western", [2, "pieces"], 300, 12, 4, 26),
+  food("chicken-wings", "Fried chicken wings", "Western", [3, "pieces"], 330, 24, 6, 23),
+  food("french-fries", "French fries", "Western", [1, "serving"], 330, 4, 42, 16),
+  food("mashed-potato", "Mashed potato", "Western", [1, "serving"], 210, 4, 30, 8),
+  food("coleslaw", "Coleslaw", "Western", [1, "serving"], 150, 1, 12, 11),
+  food("garlic-bread", "Garlic bread", "Western", [2, "slices"], 240, 5, 30, 11),
+  food("mushroom-soup", "Mushroom soup", "Western", [1, "bowl"], 200, 4, 16, 13),
+  food("caesar-salad", "Caesar salad", "Western", [1, "bowl"], 330, 12, 14, 26),
+
   // Roti and breads
   food("roti-canai", "Roti canai", "Roti and breads", [1, "piece"], 300, 7, 46, 10),
   food("roti-telur", "Roti telur", "Roti and breads", [1, "piece"], 410, 14, 48, 18),
@@ -145,6 +173,7 @@ export const MALAYSIAN_FOODS: CatalogueFood[] = [
   food("naan-cheese", "Cheese naan", "Roti and breads", [1, "piece"], 400, 13, 52, 15),
   food("kuah-dhal", "Kuah dhal", "Roti and breads", [1, "small bowl"], 110, 6, 15, 3),
   food("roti-bakar-kaya", "Roti bakar kaya butter", "Roti and breads", [2, "slices"], 290, 6, 40, 12),
+  food("rotiboy", "Rotiboy (coffee bun)", "Roti and breads", [1, "bun"], 330, 6, 40, 16),
 
   // Sides and protein
   food("ayam-goreng", "Ayam goreng", "Sides and protein", [1, "piece"], 290, 22, 8, 19),
