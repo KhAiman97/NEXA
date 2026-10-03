@@ -5,7 +5,7 @@
  * a lot (rice quantity, oil, gravy), so treat them as estimates and edit a food after saving it if
  * yours differs.
  */
-export type CatalogueGroup = "Rice" | "Noodles" | "Roti and breads" | "Sides and protein" | "Soups and porridge" | "Kuih and dessert" | "Drinks";
+export type CatalogueGroup = "Rice" | "Masakan panas" | "Noodles" | "Roti and breads" | "Sides and protein" | "Soups and porridge" | "Kuih and dessert" | "Drinks";
 
 export type CatalogueFood = {
   /** Stable id used by the server actions. */
@@ -32,7 +32,7 @@ const food = (key: string, name: string, group: CatalogueGroup, serving: [number
   fat_g,
 });
 
-export const CATALOGUE_GROUPS: CatalogueGroup[] = ["Rice", "Noodles", "Roti and breads", "Sides and protein", "Soups and porridge", "Kuih and dessert", "Drinks"];
+export const CATALOGUE_GROUPS: CatalogueGroup[] = ["Rice", "Masakan panas", "Noodles", "Roti and breads", "Sides and protein", "Soups and porridge", "Kuih and dessert", "Drinks"];
 
 export const MALAYSIAN_FOODS: CatalogueFood[] = [
   // Rice
@@ -41,9 +41,6 @@ export const MALAYSIAN_FOODS: CatalogueFood[] = [
   food("nasi-lemak-rendang", "Nasi lemak rendang daging", "Rice", [1, "plate"], 760, 30, 84, 33),
   food("nasi-ayam", "Nasi ayam (roasted)", "Rice", [1, "plate"], 610, 25, 75, 23),
   food("nasi-ayam-kukus", "Nasi ayam (steamed)", "Rice", [1, "plate"], 560, 26, 74, 17),
-  food("nasi-goreng-kampung", "Nasi goreng kampung", "Rice", [1, "plate"], 640, 20, 90, 22),
-  food("nasi-goreng-ayam", "Nasi goreng ayam", "Rice", [1, "plate"], 660, 26, 88, 23),
-  food("nasi-goreng-pattaya", "Nasi goreng pattaya", "Rice", [1, "plate"], 720, 27, 90, 28),
   food("nasi-campur-ayam", "Nasi campur (ayam and sayur)", "Rice", [1, "plate"], 650, 28, 82, 23),
   food("nasi-kandar-ayam", "Nasi kandar ayam, kuah campur", "Rice", [1, "plate"], 820, 35, 95, 32),
   food("nasi-briyani-ayam", "Nasi briyani ayam", "Rice", [1, "plate"], 880, 34, 102, 37),
@@ -52,6 +49,68 @@ export const MALAYSIAN_FOODS: CatalogueFood[] = [
   food("nasi-tomato", "Nasi tomato ayam masak merah", "Rice", [1, "plate"], 700, 28, 92, 24),
   food("banana-leaf", "Banana leaf rice (vegetarian set)", "Rice", [1, "set"], 700, 16, 115, 19),
   food("nasi-putih", "Nasi putih", "Rice", [1, "plate"], 260, 5, 57, 0.5),
+
+  // Masakan panas: cooked to order at the stall. Fried rice and noodles are a full plate; the lauk are
+  // one serving to eat with rice (add "Nasi putih" for the rice).
+  food("nasi-goreng-kampung", "Nasi goreng kampung", "Masakan panas", [1, "plate"], 640, 20, 90, 22),
+  food("nasi-goreng-daging-merah", "Nasi goreng daging merah", "Masakan panas", [1, "plate"], 760, 30, 92, 29),
+  food("nasi-goreng-ayam", "Nasi goreng ayam", "Masakan panas", [1, "plate"], 660, 26, 88, 23),
+  food("nasi-goreng-cina", "Nasi goreng cina", "Masakan panas", [1, "plate"], 600, 18, 88, 19),
+  food("nasi-goreng-pattaya", "Nasi goreng pattaya", "Masakan panas", [1, "plate"], 720, 27, 90, 28),
+  food("nasi-goreng-usa", "Nasi goreng USA", "Masakan panas", [1, "plate"], 830, 34, 94, 34),
+  food("nasi-goreng-tomyam", "Nasi goreng tomyam", "Masakan panas", [1, "plate"], 650, 24, 90, 21),
+  food("nasi-goreng-ikan-masin", "Nasi goreng ikan masin", "Masakan panas", [1, "plate"], 640, 21, 89, 22),
+  food("nasi-goreng-cili-padi", "Nasi goreng cili padi", "Masakan panas", [1, "plate"], 630, 20, 90, 21),
+  food("nasi-goreng-belacan", "Nasi goreng belacan", "Masakan panas", [1, "plate"], 640, 20, 90, 22),
+  food("nasi-goreng-seafood", "Nasi goreng seafood", "Masakan panas", [1, "plate"], 660, 28, 89, 21),
+  food("nasi-goreng-paprik", "Nasi goreng paprik", "Masakan panas", [1, "plate"], 760, 30, 94, 29),
+  food("nasi-goreng-mamak", "Nasi goreng mamak", "Masakan panas", [1, "plate"], 660, 20, 92, 23),
+  food("nasi-paprik-ayam", "Nasi paprik ayam", "Masakan panas", [1, "plate"], 700, 30, 86, 26),
+  food("nasi-paprik-daging", "Nasi paprik daging", "Masakan panas", [1, "plate"], 720, 30, 86, 28),
+  food("nasi-ayam-goreng-kunyit", "Nasi ayam goreng kunyit", "Masakan panas", [1, "plate"], 730, 30, 86, 29),
+  food("nasi-daging-goreng-kunyit", "Nasi daging goreng kunyit", "Masakan panas", [1, "plate"], 740, 31, 86, 30),
+  food("nasi-daging-masak-merah", "Nasi daging masak merah", "Masakan panas", [1, "plate"], 730, 30, 90, 27),
+  food("nasi-bujang", "Nasi bujang (nasi, telur mata, kicap)", "Masakan panas", [1, "plate"], 400, 12, 60, 12),
+  food("mee-goreng-basah", "Mee goreng basah", "Masakan panas", [1, "plate"], 620, 22, 84, 21),
+  food("mee-hailam", "Mee hailam", "Masakan panas", [1, "plate"], 560, 24, 72, 19),
+  food("mee-hong-kong", "Mee hong kong", "Masakan panas", [1, "plate"], 600, 24, 76, 22),
+  food("kuey-teow-goreng", "Kuey teow goreng", "Masakan panas", [1, "plate"], 660, 20, 86, 26),
+  food("kuey-teow-kungfu", "Kuey teow kungfu", "Masakan panas", [1, "plate"], 620, 24, 78, 23),
+  food("kuey-teow-ladna", "Kuey teow ladna", "Masakan panas", [1, "plate"], 600, 23, 76, 22),
+  food("bihun-goreng-singapore", "Bihun goreng Singapore", "Masakan panas", [1, "plate"], 540, 18, 78, 17),
+  food("mee-tomyam", "Mee tomyam", "Masakan panas", [1, "bowl"], 480, 24, 64, 14),
+  food("bihun-tomyam", "Bihun tomyam", "Masakan panas", [1, "bowl"], 420, 22, 58, 11),
+  food("mee-sup", "Mee sup", "Masakan panas", [1, "bowl"], 400, 20, 58, 9),
+  food("bihun-sup", "Bihun sup", "Masakan panas", [1, "bowl"], 360, 19, 54, 7),
+  food("maggi-sup", "Maggi sup", "Masakan panas", [1, "bowl"], 420, 14, 56, 16),
+  food("maggi-tomyam", "Maggi tomyam", "Masakan panas", [1, "bowl"], 450, 17, 58, 17),
+  food("paprik-ayam", "Paprik ayam", "Masakan panas", [1, "serving"], 320, 26, 14, 18),
+  food("paprik-daging", "Paprik daging", "Masakan panas", [1, "serving"], 340, 26, 14, 20),
+  food("paprik-campur", "Paprik campur", "Masakan panas", [1, "serving"], 330, 27, 14, 18),
+  food("ayam-goreng-kunyit", "Ayam goreng kunyit", "Masakan panas", [1, "serving"], 330, 26, 8, 22),
+  food("daging-goreng-kunyit", "Daging goreng kunyit", "Masakan panas", [1, "serving"], 340, 27, 8, 22),
+  food("daging-masak-merah", "Daging masak merah", "Masakan panas", [1, "serving"], 330, 25, 12, 20),
+  food("daging-lada-hitam", "Daging masak lada hitam", "Masakan panas", [1, "serving"], 330, 26, 12, 20),
+  food("ayam-masak-halia", "Ayam masak halia", "Masakan panas", [1, "serving"], 300, 25, 10, 18),
+  food("ayam-sweet-sour", "Ayam masam manis", "Masakan panas", [1, "serving"], 380, 24, 28, 19),
+  food("ikan-sweet-sour", "Ikan masam manis", "Masakan panas", [1, "serving"], 360, 24, 26, 18),
+  food("siakap-tiga-rasa", "Ikan siakap tiga rasa", "Masakan panas", [1, "fish"], 680, 62, 40, 30),
+  food("siakap-stim-limau", "Ikan siakap stim limau", "Masakan panas", [1, "fish"], 420, 62, 8, 15),
+  food("sotong-goreng-tepung", "Sotong goreng tepung", "Masakan panas", [1, "serving"], 380, 18, 30, 21),
+  food("udang-goreng-tepung", "Udang goreng tepung", "Masakan panas", [1, "serving"], 390, 20, 28, 22),
+  food("udang-butter", "Udang butter", "Masakan panas", [1, "serving"], 430, 22, 18, 30),
+  food("tomyam-ayam", "Tomyam ayam", "Masakan panas", [1, "bowl"], 230, 22, 12, 10),
+  food("tomyam-seafood", "Tomyam seafood", "Masakan panas", [1, "bowl"], 240, 25, 12, 10),
+  food("tomyam-putih", "Tomyam putih", "Masakan panas", [1, "bowl"], 200, 22, 10, 8),
+  food("sup-daging", "Sup daging", "Masakan panas", [1, "bowl"], 220, 22, 8, 11),
+  food("sup-tulang", "Sup tulang", "Masakan panas", [1, "bowl"], 300, 24, 8, 19),
+  food("sup-ekor", "Sup ekor", "Masakan panas", [1, "bowl"], 380, 28, 8, 26),
+  food("sup-sayur", "Sup sayur", "Masakan panas", [1, "bowl"], 90, 4, 12, 3),
+  food("kailan-ikan-masin", "Kailan ikan masin", "Masakan panas", [1, "serving"], 150, 6, 9, 10),
+  food("kailan-sos-tiram", "Kailan sos tiram", "Masakan panas", [1, "serving"], 120, 4, 10, 7),
+  food("telur-mata", "Telur mata", "Masakan panas", [1, "egg"], 92, 6, 0.4, 7),
+  food("telur-dadar", "Telur dadar", "Masakan panas", [1, "serving"], 160, 10, 1, 13),
+  food("telur-bungkus", "Telur bungkus", "Masakan panas", [1, "serving"], 270, 16, 8, 19),
 
   // Noodles
   food("mi-goreng-mamak", "Mi goreng mamak", "Noodles", [1, "plate"], 660, 20, 92, 22),
@@ -86,8 +145,6 @@ export const MALAYSIAN_FOODS: CatalogueFood[] = [
   food("rendang-daging", "Rendang daging", "Sides and protein", [100, "g"], 250, 20, 6, 16),
   food("ikan-bakar", "Ikan bakar", "Sides and protein", [1, "fish"], 260, 34, 3, 12),
   food("satay-ayam", "Satay ayam with kuah kacang", "Sides and protein", [10, "sticks"], 480, 36, 22, 27),
-  food("telur-mata", "Telur mata", "Sides and protein", [1, "egg"], 92, 6, 0.4, 7),
-  food("telur-dadar", "Telur dadar", "Sides and protein", [1, "serving"], 160, 10, 1, 13),
   food("sambal-sotong", "Sambal sotong", "Sides and protein", [1, "serving"], 190, 16, 9, 10),
   food("sayur-campur", "Sayur campur goreng", "Sides and protein", [1, "serving"], 110, 3, 10, 7),
   food("kangkung-belacan", "Kangkung belacan", "Sides and protein", [1, "serving"], 130, 4, 8, 9),

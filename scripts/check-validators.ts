@@ -3,6 +3,7 @@ import { partialOf } from "../lib/validators/common";
 import { accountInput, transactionInput, monthlyGoalInput } from "../lib/validators/finance";
 import { projectInput } from "../lib/validators/projects";
 import { fillAmounts, fuelLogInput } from "../lib/validators/vehicles";
+import { CATALOGUE_GROUPS, MALAYSIAN_FOODS } from "../lib/app/malaysian-foods";
 
 let failed = 0;
 const check = (name: string, ok: boolean, detail?: unknown) => {
@@ -48,6 +49,17 @@ check("fuel: both given are both kept", same(fillAmounts({ liters: 30, total_cos
 check("fuel: neither given is an error", "error" in fillAmounts({ price_per_liter: 1.99 }));
 check("fuel: amount with no price is an error", "error" in fillAmounts({ total_cost: 50, price_per_liter: 0 }));
 check("fuel: a zero amount is an error", "error" in fillAmounts({ total_cost: 0, price_per_liter: 1.99 }));
+
+// 6. The built-in food menu: every dish can be saved and logged by its key
+const keys = MALAYSIAN_FOODS.map((f) => f.key);
+const names = MALAYSIAN_FOODS.map((f) => f.name.toLowerCase());
+check("menu: keys are unique", new Set(keys).size === keys.length, keys.filter((k, i) => keys.indexOf(k) !== i).join());
+check("menu: names are unique", new Set(names).size === names.length, names.filter((n, i) => names.indexOf(n) !== i).join());
+check("menu: every dish belongs to a listed group", MALAYSIAN_FOODS.every((f) => CATALOGUE_GROUPS.includes(f.group)) && CATALOGUE_GROUPS.every((g) => MALAYSIAN_FOODS.some((f) => f.group === g)));
+// Calories should be roughly 4 kcal per gram of protein and carbohydrate and 9 per gram of fat.
+const off = MALAYSIAN_FOODS.filter((f) => f.calories >= 100 && Math.abs(f.calories - (4 * f.protein_g + 4 * f.carbs_g + 9 * f.fat_g)) / f.calories > 0.15).map((f) => f.name);
+check("menu: calories agree with the macros within 15%", off.length === 0, off.join(", "));
+check("menu: the masakan panas dishes are there", ["nasi-goreng-kampung", "nasi-goreng-daging-merah", "telur-mata", "paprik-ayam", "kuey-teow-kungfu", "tomyam-seafood"].every((k) => MALAYSIAN_FOODS.some((f) => f.key === k && f.group === "Masakan panas")));
 
 console.log(failed ? `\n${failed} FAILED` : "\nall passed");
 process.exit(failed ? 1 : 0);
